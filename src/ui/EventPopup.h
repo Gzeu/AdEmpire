@@ -1,185 +1,176 @@
 #pragma once
-// =============================================================================
-// EventPopup.h  —  AdEmpire v0.9
-// Animated centered modal shown when a JSON market event fires.
-// Features: icon, title, description, effect summary, slide+fade animation.
-// Usage:
-//   static EventPopup ep;
-//   ep.Show(evt);          // call when event triggers
-//   ep.Render();           // call every frame
-//   if (ep.WasDismissed()) { ... }
-// =============================================================================
 #include "imgui.h"
+#include "../core/GameState.h"
+#include "../systems/ToastSystem.h"
 #include <string>
-#include <cmath>
+#include <unordered_set>
 
-struct MarketEventData {
-    std::string id;
+// ─── EventPopup ───────────────────────────────────────────────────────────────
+// Modal blocker for CRITICAL / HIGH severity market events.
+// Minor events → toast only.  Major events → fullscreen modal with Acknowledge.
+// Usage: call EventPopup::Render(gs, toasts) once per frame in your main loop.
+// ─────────────────────────────────────────────────────────────────────────────
+
+struct EventPopupEntry {
+    std::string id;           // event id e.g. "crypto_winter"
     std::string title;
     std::string description;
-    std::string effectText;     // e.g. "+15% Social reach for 2 months"
-    std::string category;       // "opportunity"|"threat"|"neutral"|"crisis"
-    float       durationMonths = 1.0f;
+    std::string effect;       // human-readable effect
+    ImVec4      color;        // accent color for header
+    bool        acknowledged = false;
 };
 
 class EventPopup {
 public:
-    bool IsOpen()         const { return m_open; }
-    bool WasDismissed()   const { return m_dismissed; }
-    void ClearDismissed()       { m_dismissed = false; }
+    // Call once per frame — renders pending modal if any
+    static void Render(GameState& gs, ToastSystem& toasts) {
+        // Check pendingEventPopup from GameState
+        if (!gs.pendingEventPopup) return;
+        if (gs.currentEventId.empty()) return;
 
-    void Show(const MarketEventData& evt) {
-        m_evt       = evt;
-        m_open      = true;
-        m_dismissed = false;
-        m_timer     = 0.0f;
-    }
+        // Build entry from currentEventId
+        EventPopupEntry entry = BuildEntry(gs.currentEventId, gs.currentEvent);
 
-    void Render() {
-        if (!m_open) return;
-        m_dismissed = false;
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(),
+                                ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(520, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.97f);
 
-        float dt = ImGui::GetIO().DeltaTime;
-        m_timer += dt;
+        // Darken background overlay
+        ImDrawList* dl = ImGui::GetBackgroundDrawList();
+        ImVec2 vp = ImGui::GetMainViewport()->Size;
+        dl->AddRectFilled({0,0}, vp, IM_COL32(0,0,0,160));
 
-        ImGuiIO& io  = ImGui::GetIO();
-        ImVec2   disp = io.DisplaySize;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration
+                               | ImGuiWindowFlags_NoMove
+                               | ImGuiWindowFlags_NoSavedSettings
+                               | ImGuiWindowFlags_NoBringToDisplayFront;
 
-        // semi-transparent backdrop
-        ImDrawList* bg = ImGui::GetBackgroundDrawList();
-        float bgA = std::min(0.65f, m_timer * 3.0f);
-        bg->AddRectFilled({0,0}, disp, IM_COL32(0,0,0,(int)(255*bgA)));
+        if (ImGui::Begin("##EventModal", nullptr, flags)) {
+            // Colored header bar
+            ImDrawList* wdl = ImGui::GetWindowDrawList();
+            ImVec2 wp = ImGui::GetWindowPos();
+            ImVec2 ws = ImGui::GetWindowSize();
+            wdl->AddRectFilled(wp, {wp.x + ws.x, wp.y + 52},
+                IM_COL32((int)(entry.color.x*255),
+                         (int)(entry.color.y*255),
+                         (int)(entry.color.z*255), 220), 6.0f);
 
-        // ease-in-out slide from top
-        float slideT = std::min(1.0f, m_timer * 4.0f);
-        float ease   = 1.0f - powf(1.0f - slideT, 3.0f);
+            // Severity badge
+            std::string badge = IsCritical(gs.currentEventId) ? "  CRITICAL EVENT  " : "  MARKET EVENT  ";
+            ImGui::SetCursorPosY(10);
+            ImGui::SetCursorPosX((ws.x - ImGui::CalcTextSize(badge.c_str()).x) * 0.5f);
+            ImGui::TextColored({1,1,1,1}, "%s", badge.c_str());
 
-        const float PW = 480.0f, PH = 280.0f;
-        float px = disp.x/2.0f - PW/2.0f;
-        float py = disp.y/2.0f - PH/2.0f - (1.0f-ease)*40.0f;
+            ImGui::SetCursorPosY(58);
+            ImGui::Separator();
 
-        // --- category colour
-        ImVec4 catCol = CategoryColor();
-        ImU32  catU32 = ImGui::ColorConvertFloat4ToU32(catCol);
+            // Title
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts.Size > 1 ?
+                            ImGui::GetIO().Fonts->Fonts[1] : nullptr);
+            float tw = ImGui::CalcTextSize(entry.title.c_str()).x;
+            ImGui::SetCursorPosX((ws.x - tw) * 0.5f);
+            ImGui::SetCursorPosY(70);
+            ImGui::TextColored(entry.color, "%s", entry.title.c_str());
+            if (ImGui::GetIO().Fonts->Fonts.Size > 1) ImGui::PopFont();
 
-        ImGui::SetNextWindowPos({px, py});
-        ImGui::SetNextWindowSize({PW, PH});
-        ImGui::SetNextWindowBgAlpha(0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0,0});
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 14.0f);
-        ImGui::Begin("##eventpopup", nullptr,
-            ImGuiWindowFlags_NoDecoration |
-            ImGuiWindowFlags_NoNav        |
-            ImGuiWindowFlags_NoMove       |
-            ImGuiWindowFlags_NoSavedSettings);
-        ImGui::PopStyleVar(2);
+            ImGui::Spacing();
+            ImGui::Spacing();
 
-        ImDrawList* dl  = ImGui::GetWindowDrawList();
-        ImVec2 wp = ImGui::GetWindowPos();
+            // Description
+            ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ws.x - 40);
+            ImGui::TextColored({0.85f,0.85f,0.85f,1.0f}, "%s", entry.description.c_str());
+            ImGui::PopTextWrapPos();
 
-        // window bg
-        dl->AddRectFilled(wp, {wp.x+PW, wp.y+PH},
-                          IM_COL32(22,20,17,245), 14.0f);
-        dl->AddRect(wp, {wp.x+PW, wp.y+PH}, catU32, 14.0f, 0, 1.5f);
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
 
-        // category colour header strip
-        ImVec4 stripCol = catCol; stripCol.w = 0.15f;
-        dl->AddRectFilled(wp, {wp.x+PW, wp.y+52.0f},
-                          ImGui::ColorConvertFloat4ToU32(stripCol), 14.0f);
-        dl->AddRectFilled({wp.x, wp.y+38.0f}, {wp.x+PW, wp.y+52.0f},
-                          ImGui::ColorConvertFloat4ToU32(stripCol));
-
-        // category badge
-        const char* catLabel = CategoryLabel();
-        ImVec2 clts = ImGui::CalcTextSize(catLabel);
-        dl->AddRectFilled(
-            {wp.x + PW/2.0f - clts.x/2.0f - 8.0f, wp.y+12.0f},
-            {wp.x + PW/2.0f + clts.x/2.0f + 8.0f, wp.y+34.0f},
-            ImGui::ColorConvertFloat4ToU32({catCol.x,catCol.y,catCol.z,0.25f}),
-            6.0f);
-        dl->AddText({wp.x + PW/2.0f - clts.x/2.0f, wp.y+14.0f}, catU32, catLabel);
-
-        // icon
-        const char* icon = CategoryIcon();
-        ImVec2 its = ImGui::CalcTextSize(icon);
-        dl->AddText({wp.x + PW/2.0f - its.x/2.0f, wp.y + 58.0f},
-                    catU32, icon);
-
-        // title
-        ImVec2 tts = ImGui::CalcTextSize(m_evt.title.c_str());
-        dl->AddText(
-            {wp.x + PW/2.0f - tts.x/2.0f, wp.y + 92.0f},
-            IM_COL32(235,230,220,245), m_evt.title.c_str());
-
-        // divider
-        dl->AddLine({wp.x+32, wp.y+116}, {wp.x+PW-32, wp.y+116},
-                    IM_COL32(255,255,255,20), 1.0f);
-
-        // description (word-wrap)
-        ImGui::SetCursorPos({24.0f, 124.0f});
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.75f,0.73f,0.70f,1.0f));
-        ImGui::PushTextWrapPos(PW - 24.0f);
-        ImGui::TextUnformatted(m_evt.description.c_str());
-        ImGui::PopTextWrapPos();
-        ImGui::PopStyleColor();
-
-        // effect text
-        if (!m_evt.effectText.empty()) {
-            ImGui::SetCursorPos({24.0f, 175.0f});
-            ImGui::PushStyleColor(ImGuiCol_Text,
-                {catCol.x, catCol.y, catCol.z, 0.9f});
-            ImGui::Text("> %s", m_evt.effectText.c_str());
+            // Effect box
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f,0.12f,0.15f,1.0f));
+            ImGui::BeginChild("##effect", {ws.x - 32, 48}, true);
+            ImGui::TextColored({0.6f,0.6f,0.6f,1.0f}, "Effect:");
+            ImGui::SameLine();
+            ImGui::TextColored(entry.color, "%s", entry.effect.c_str());
+            ImGui::EndChild();
             ImGui::PopStyleColor();
-        }
 
-        // duration tag
-        if (m_evt.durationMonths > 1.0f) {
-            char dur[40];
-            snprintf(dur, sizeof(dur), "Duration: %.0f months", m_evt.durationMonths);
-            ImVec2 dts = ImGui::CalcTextSize(dur);
-            dl->AddText({wp.x + PW/2.0f - dts.x/2.0f, wp.y+202.0f},
-                        IM_COL32(160,160,160,160), dur);
-        }
+            ImGui::Spacing();
+            ImGui::Spacing();
 
-        // dismiss button
-        ImGui::SetCursorPos({PW/2.0f - 70.0f, 228.0f});
-        ImGui::PushStyleColor(ImGuiCol_Button,        {catCol.x,catCol.y,catCol.z,0.85f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, {catCol.x+0.1f,catCol.y+0.1f,catCol.z+0.1f,1.0f});
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  {catCol.x-0.1f,catCol.y-0.1f,catCol.z-0.1f,1.0f});
-        ImGui::PushStyleColor(ImGuiCol_Text,          {0.05f,0.04f,0.02f,1.0f});
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.0f);
-        if (ImGui::Button("Acknowledge", {140.0f, 34.0f})) {
-            m_open      = false;
-            m_dismissed = true;
-        }
-        ImGui::PopStyleVar();
-        ImGui::PopStyleColor(4);
+            // revenueMultiplier live preview
+            float rm = gs.revenueMultiplier;
+            ImVec4 rmColor = rm >= 1.0f ? ImVec4(0.3f,0.9f,0.4f,1.0f) : ImVec4(0.9f,0.3f,0.3f,1.0f);
+            ImGui::TextColored({0.6f,0.6f,0.6f,1.0f}, "Revenue multiplier now:");
+            ImGui::SameLine();
+            ImGui::TextColored(rmColor, "x%.2f", rm);
 
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            // Acknowledge button
+            float bw = 180.0f;
+            ImGui::SetCursorPosX((ws.x - bw) * 0.5f);
+            ImGui::PushStyleColor(ImGuiCol_Button,        entry.color);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(entry.color.x*1.1f, entry.color.y*1.1f, entry.color.z*1.1f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(entry.color.x*0.8f, entry.color.y*0.8f, entry.color.z*0.8f, 1.0f));
+            if (ImGui::Button("  Acknowledge  ", {bw, 36})) {
+                gs.pendingEventPopup = false;
+                gs.currentEventId.clear();
+                toasts.Push("Event acknowledged: " + entry.title, ToastType::Info);
+            }
+            ImGui::PopStyleColor(3);
+            ImGui::Spacing();
+        }
         ImGui::End();
     }
 
 private:
-    bool             m_open      = false;
-    bool             m_dismissed = false;
-    float            m_timer     = 0.0f;
-    MarketEventData  m_evt;
+    static bool IsCritical(const std::string& id) {
+        static const std::unordered_set<std::string> critical = {
+            "crypto_winter", "market_panic", "economic_downturn",
+            "regulatory_crackdown", "black_swan"
+        };
+        return critical.count(id) > 0;
+    }
 
-    ImVec4 CategoryColor() const {
-        if (m_evt.category == "opportunity") return {0.35f,0.62f,0.27f,1.0f};
-        if (m_evt.category == "threat")      return {0.79f,0.29f,0.17f,1.0f};
-        if (m_evt.category == "crisis")      return {0.79f,0.29f,0.17f,1.0f};
-        return {0.91f,0.63f,0.19f,1.0f};  // neutral = gold
-    }
-    const char* CategoryLabel() const {
-        if (m_evt.category == "opportunity") return "OPPORTUNITY";
-        if (m_evt.category == "threat")      return "MARKET THREAT";
-        if (m_evt.category == "crisis")      return "CRISIS";
-        return "MARKET EVENT";
-    }
-    const char* CategoryIcon() const {
-        if (m_evt.category == "opportunity") return "[+]";
-        if (m_evt.category == "threat")      return "[!]";
-        if (m_evt.category == "crisis")      return "[X]";
-        return "[~]";
+    static EventPopupEntry BuildEntry(const std::string& id, const std::string& rawDesc) {
+        EventPopupEntry e;
+        e.id = id;
+
+        // Color + title + effect by event id
+        if (id == "crypto_winter") {
+            e.title       = "Crypto Winter";
+            e.description = rawDesc.empty() ? "A prolonged bear market has frozen the crypto sector. Client budgets tied to digital assets are slashed. Fear & Greed index below 20." : rawDesc;
+            e.effect      = "Revenue x0.45 for crypto clients. Duration: 30-90 days";
+            e.color       = {0.3f, 0.6f, 1.0f, 1.0f}; // icy blue
+        } else if (id == "market_panic") {
+            e.title       = "Market Panic";
+            e.description = rawDesc.empty() ? "Mass sell-off triggered across all markets. Advertising budgets are the first to be cut." : rawDesc;
+            e.effect      = "All campaign revenues x0.60 for 14 days";
+            e.color       = {1.0f, 0.35f, 0.2f, 1.0f}; // red-orange
+        } else if (id == "ai_hype_wave") {
+            e.title       = "AI Hype Wave";
+            e.description = rawDesc.empty() ? "AI dominates every headline. Clients in tech, media, and fintech are increasing ad spend significantly." : rawDesc;
+            e.effect      = "Tech/Media campaigns x1.55 for 21 days";
+            e.color       = {0.4f, 0.9f, 0.6f, 1.0f}; // green
+        } else if (id == "economic_downturn") {
+            e.title       = "Economic Downturn";
+            e.description = rawDesc.empty() ? "GDP contraction confirmed. Consumer spending drops. All discretionary ad budgets under review." : rawDesc;
+            e.effect      = "All revenues x0.70 for 45 days";
+            e.color       = {0.9f, 0.7f, 0.2f, 1.0f}; // amber
+        } else if (id == "strong_euro_bonus") {
+            e.title       = "Strong Euro Bonus";
+            e.description = rawDesc.empty() ? "EUR/USD above 1.15 for 5 consecutive days. European client budgets effectively larger." : rawDesc;
+            e.effect      = "EU client revenues x1.20 for 14 days";
+            e.color       = {0.5f, 0.8f, 1.0f, 1.0f};
+        } else {
+            // Generic fallback
+            e.title       = id;
+            e.description = rawDesc.empty() ? "A significant market event has occurred affecting your agency operations." : rawDesc;
+            e.effect      = "See Live Market panel for details";
+            e.color       = {0.7f, 0.7f, 0.7f, 1.0f};
+        }
+        return e;
     }
 };

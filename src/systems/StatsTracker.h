@@ -1,57 +1,53 @@
 #pragma once
-#include "../core/GameState.h"
-#include <array>
-#include <string>
+#include <cstdint>
 
-// Per-channel stats accumulated each month
-struct ChannelStats {
-    float totalRevenue  = 0.f;
-    float totalSpent    = 0.f;
-    int   campaignCount = 0;
-    int   wins          = 0; // campaigns that generated > 0 revenue
+// ─── AgencyStats ─────────────────────────────────────────────────────────────
+// Central stats struct embedded in GameState.
+// Updated by: CampaignEngine (revenue), ContractSystem (contracts),
+//             AchievementSystem (achievements), EventPopup (market ticks)
+// Read by:    EndGameSummary, StatsPanel, LeaderboardPersistence
+// ─────────────────────────────────────────────────────────────────────────────
+
+struct AgencyStats {
+    // Revenue tracking
+    float    totalRevenue         = 0.0f;
+    float    monthlyRevenue       = 0.0f;  // resets each month
+    float    bestMonthRevenue     = 0.0f;
+
+    // Campaigns
+    int      campaignsCompleted   = 0;
+    int      campaignsFailed      = 0;
+    int      campaignsStarted     = 0;
+
+    // Contracts
+    int      contractsFulfilled   = 0;
+    int      contractsBroken      = 0;
+
+    // Market
+    float    peakMarketShare      = 0.0f;
+    int      marketBonusTicks     = 0;  // frames where revenueMultiplier > 1.2
+    int      marketPenaltyTicks   = 0;  // frames where revenueMultiplier < 0.7
+
+    // Staff & Achievements
+    int      maxStaffLevel        = 1;
+    int      achievementsUnlocked = 0;
+    int      negotiationsWon      = 0;
+    int      negotiationsLost     = 0;
+
+    // Helpers
+    void UpdateBestMonth() {
+        if (monthlyRevenue > bestMonthRevenue)
+            bestMonthRevenue = monthlyRevenue;
+    }
+    void ResetMonth() {
+        UpdateBestMonth();
+        monthlyRevenue = 0.0f;
+    }
+    float WinRate() const {
+        int total = negotiationsWon + negotiationsLost;
+        return total > 0 ? (float)negotiationsWon / total : 0.0f;
+    }
 };
 
-// Per-industry stats
-struct IndustryStats {
-    int   pitched  = 0;
-    int   won      = 0;
-    int   lost     = 0;
-    float revenue  = 0.f;
-};
-
-// Monthly snapshot for history charts
-struct MonthSnapshot {
-    int   month, year;
-    float revenue;
-    float expenses;
-    float marketShare;
-    int   activeClients;
-};
-
-class StatsTracker {
-public:
-    static StatsTracker& Get();
-
-    void RecordMonth(const GameState& gs);
-    void RecordCampaignRevenue(ChannelType ch, float revenue, float spent);
-    void RecordPitch(ClientIndustry ind, bool won);
-
-    // Accessors for UI
-    const ChannelStats&              GetChannelStats(ChannelType ch) const;
-    const IndustryStats&             GetIndustryStats(ClientIndustry ind) const;
-    const std::vector<MonthSnapshot>& GetHistory() const { return history; }
-
-    float GetWinRateForIndustry(ClientIndustry ind) const;
-    float GetROIForChannel(ChannelType ch) const;
-
-    // Chart data helpers (fills float arrays for ImGui::PlotLines)
-    void FillRevenueHistory(float* out, int maxCount) const;
-    void FillChannelRevenue(float out[6]) const;
-    void FillIndustryWinRate(float out[8]) const;
-
-private:
-    StatsTracker() = default;
-    std::array<ChannelStats,  6> channelStats  = {};
-    std::array<IndustryStats, 8> industryStats = {};
-    std::vector<MonthSnapshot>   history;
-};
+// Alias for backward compatibility (old code using StatsTracker)
+using StatsTracker = AgencyStats;
