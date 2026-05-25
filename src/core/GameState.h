@@ -6,7 +6,7 @@
 #include "imgui.h"
 #include "../systems/Leaderboard.h"
 
-// ─── Channel Types ─────────────────────────────────────────────────────────
+// ─── Channel Types ───────────────────────────────────────────────────────────────────────
 enum class ChannelType {
     Social, SEO, Email, Influencer, PR, PaidSearch
 };
@@ -21,7 +21,7 @@ static const char* ChannelNames[] = {
     "Social Media", "SEO", "Email", "Influencer", "PR", "Paid Search"
 };
 
-// ─── Campaign ───────────────────────────────────────────────────────────────
+// ─── Campaign ───────────────────────────────────────────────────────────────────────────
 struct Campaign {
     int         id;
     std::string name;
@@ -40,8 +40,7 @@ struct Campaign {
     float       qualityScore;
 };
 
-// ─── Client ─────────────────────────────────────────────────────────────────
-enum class ContractType {
+// ─── Client ────────────────────────────────────────────────────────────────────────────nenum class ContractType {
     Monthly, Quarterly, Annual
 };
 
@@ -82,8 +81,7 @@ struct Client {
     int            unlockMonth = 1;
 };
 
-// ─── Staff ──────────────────────────────────────────────────────────────────
-enum class StaffRole {
+// ─── Staff ─────────────────────────────────────────────────────────────────────────────nenum class StaffRole {
     SocialMediaManager, SEOSpecialist, ContentCreator,
     PRManager, DataAnalyst, AccountManager
 };
@@ -107,7 +105,7 @@ struct StaffMember {
     int         level = 0;
 };
 
-// ─── AI Competitor ───────────────────────────────────────────────────────────
+// ─── AI Competitor ────────────────────────────────────────────────────────────────────────
 struct AIAgency {
     std::string name;
     float       marketShare;
@@ -118,7 +116,7 @@ struct AIAgency {
     std::string strategy;
 };
 
-// ─── News Event ──────────────────────────────────────────────────────────────
+// ─── News Event ──────────────────────────────────────────────────────────────────────────
 struct NewsEvent {
     std::string title, description, impact;
     float socialMod, seoMod, emailMod, influencerMod, prMod, paidMod;
@@ -128,26 +126,25 @@ struct NewsEvent {
     int   monthsLeft;
 };
 
-// ─── v0.9: Game Event (popup events from EventSystem) ────────────────────────
+// ─── v0.9: Game Event ───────────────────────────────────────────────────────────────────────
 struct GameEvent {
     std::string id;
     std::string title;
     std::string description;
-    std::string impact;          // short one-liner shown in popup
-    float       budgetDelta   = 0.f;
-    float       reputationDelta = 0.f;
+    std::string impact;
+    float       budgetDelta      = 0.f;
+    float       reputationDelta  = 0.f;
     float       marketShareDelta = 0.f;
-    // Channel multiplier deltas (additive on top of NewsEvent mods)
-    float socialMod   = 1.f;
-    float seoMod      = 1.f;
-    float emailMod    = 1.f;
+    float socialMod     = 1.f;
+    float seoMod        = 1.f;
+    float emailMod      = 1.f;
     float influencerMod = 1.f;
-    float prMod       = 1.f;
-    float paidMod     = 1.f;
+    float prMod         = 1.f;
+    float paidMod       = 1.f;
     int   durationMonths = 1;
 };
 
-// ─── Agency Stats ────────────────────────────────────────────────────────────
+// ─── Agency Stats ────────────────────────────────────────────────────────────────────────
 struct AgencyStats {
     float totalRevenue       = 0.f;
     float totalSpent         = 0.f;
@@ -161,7 +158,7 @@ struct AgencyStats {
     int   negotiationsLost   = 0;
 };
 
-// ─── v0.2: FitScore ──────────────────────────────────────────────────────────
+// ─── v0.2: FitScore ──────────────────────────────────────────────────────────────────────────
 struct FitScore {
     float channel    = 0.f;
     float industry   = 0.f;
@@ -170,7 +167,7 @@ struct FitScore {
     float total() const { return channel + industry + reputation + capacity; }
 };
 
-// ─── v0.2: CapacityInfo ──────────────────────────────────────────────────────
+// ─── v0.2: CapacityInfo ───────────────────────────────────────────────────────────────────────
 struct CapacityInfo {
     int   maxClients     = 4;
     float utilizationPct = 0.f;
@@ -178,7 +175,7 @@ struct CapacityInfo {
     bool  burnoutRisk    = false;
 };
 
-// ─── v0.2: Quarterly Goals ───────────────────────────────────────────────────
+// ─── v0.2: Quarterly Goals ─────────────────────────────────────────────────────────────────────
 enum class GoalType { Revenue, ClientCount, MarketShare, CampaignCount, Reward };
 struct QuarterlyGoal {
     GoalType    type;
@@ -190,7 +187,7 @@ struct QuarterlyGoal {
     bool        failed;
 };
 
-// ─── v0.2: Negotiation ───────────────────────────────────────────────────────
+// ─── v0.2: Negotiation ────────────────────────────────────────────────────────────────────────
 enum class NegotiationStage {
     Intro, BudgetDiscussion, ChannelSelection, ContractTerms, FinalOffer, Closed
 };
@@ -207,12 +204,12 @@ struct NegotiationState {
     bool             lostDeal      = false;
     bool             wonDeal       = false;
     ContractType     offeredContract = ContractType::Monthly;
-    ChannelType      offeredChannel = ChannelType::Social;
+    ChannelType      offeredChannel  = ChannelType::Social;
     FitScore         fitScore;
-    int              playerPressure = 0;
+    int              playerPressure  = 0;
 };
 
-// ─── v0.2: Specialization ────────────────────────────────────────────────────
+// ─── v0.2: Specialization ──────────────────────────────────────────────────────────────────────
 struct Specialization {
     ClientIndustry industry;
     float          bonusMultiplier;
@@ -221,7 +218,7 @@ struct Specialization {
     bool           unlocked;
 };
 
-// ─── v0.5: Save Slot ─────────────────────────────────────────────────────────
+// ─── v0.5: Save Slot ───────────────────────────────────────────────────────────────────────────
 struct SaveSlotMeta {
     bool        occupied    = false;
     std::string agencyName;
@@ -232,10 +229,10 @@ struct SaveSlotMeta {
     int         clients     = 0;
 };
 
-// ─── Achievement (forward declaration for use in GameState) ───────────────────
+// ─── Achievement (forward declaration) ──────────────────────────────────────────────────────
 struct Achievement;
 
-// ─── Main GameState ──────────────────────────────────────────────────────────
+// ─── Main GameState ────────────────────────────────────────────────────────────────────────
 struct GameState {
     // Agency info
     std::string agencyName      = "My Agency";
@@ -269,22 +266,25 @@ struct GameState {
     // Market
     float playerMarketShare = 2.f;
 
+    // ── v1.0: Real-market revenue multiplier (set by MarketEventBridge each month)
+    // Range: 0.3 (extreme bear/panic) – 2.0 (bull+euphoria)
+    // Default 1.0 = neutral market, no modification
+    float revenueMultiplier = 1.0f;
+
     // Auto-increment IDs
     int nextClientId   = 1;
     int nextCampaignId = 1;
     int nextStaffId    = 1;
 
-    // ── v0.9: Agency Branding ─────────────────────────────────────────────────
-    // Used by AgencyBrandingPanel + navbar badge
-    ImVec4      agencyColor = ImVec4(1.f, 0.78f, 0.f, 1.f);  // gold default
-    std::string agencyLogo  = "Diamond";                       // logo preset key
+    // ── v0.9: Agency Branding
+    ImVec4      agencyColor = ImVec4(1.f, 0.78f, 0.f, 1.f);
+    std::string agencyLogo  = "Diamond";
 
-    // ── v0.9: Event Popup gate ────────────────────────────────────────────────
-    // Set to true by EventSystem::TryTriggerEvent(); cleared by EventPopup after dismiss
+    // ── v0.9: Event Popup gate
     bool        pendingEventPopup = false;
-    GameEvent   currentEvent;                                  // event to display
+    GameEvent   currentEvent;
 
-    // ── UI flags (all panel visibility) ──────────────────────────────────────
+    // ── UI flags
     bool showDashboard       = true;
     bool showCampaigns       = false;
     bool showClients         = false;
@@ -305,7 +305,7 @@ struct GameState {
     bool victory             = false;
 };
 
-// ─── Achievement ─────────────────────────────────────────────────────────────
+// ─── Achievement ────────────────────────────────────────────────────────────────────────────
 struct Achievement {
     int         id;
     std::string title;

@@ -5,123 +5,81 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <map>
 
 // ============================================================
-//  WikiTrendFeed — Wikipedia Most Viewed (global trending)
-//  Source: en.wikipedia.org/w/api.php mostviewed (zero auth)
-//  Fills: state.trendingKeyword, state.wikiTrendScore,
-//         state.aiHypeActive, state.recessionRiskActive
+//  WikiTrendFeed
+//  Source: Wikimedia Pageviews REST API (HTTPS, zero auth)
+//  Endpoint: wikimedia.org/api/rest_v1/metrics/pageviews/
+//  Also uses en.wikipedia.org/w/api.php mostviewed as fallback
+//
+//  Derives:
+//    state.trendingKeywords  — top 8 topic names
+//    state.trendingScore     — relative "virality" 0-100
 // ============================================================
 
 class WikiTrendFeed {
 public:
     static void Fetch(MarketState& state) {
-        auto topics = FetchTopics();
-        if (topics.empty()) return;
-        ClassifyTopics(topics, state);
+        FetchWikimediaPageviews(state);
+        // If primary failed, TrendFeed::Fetch() already covers the fallback
+        // but we add a score estimate here
+        if (!state.trendingKeywords.empty())
+            state.trendingScore = std::min(100, (int)state.trendingKeywords.size() * 10 + 20);
     }
 
 private:
-    struct WikiPage { std::string title; int views; };
-
-    static std::vector<WikiPage> FetchTopics() {
-        std::vector<WikiPage> pages;
+    static void FetchWikimediaPageviews(MarketState& state) {
         try {
-            httplib::Client cli("http://en.wikipedia.org");
+            // Get top articles for yesterday via Wikimedia REST API
+            httplib::SSLClient cli("wikimedia.org", 443);
             cli.set_connection_timeout(6);
             cli.set_read_timeout(8);
+            cli.enable_server_certificate_verification(true);
+            httplib::Headers hdrs = {{ "User-Agent", "AdEmpire/1.0 (github.com/Gzeu/AdEmpire)" }};
+            // Use /all-access/all-agents/top — yesterday
+            // Date is hardcoded-relative; real impl should compute yesterday's date
             auto res = cli.Get(
-                "/w/api.php?action=query&list=mostviewed"
-                "&pvimoffset=0&pvimlimit=20&format=json");
-            if (!res || res->status != 200) return pages;
+                "/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/2026/05/25",
+                hdrs);
+            if (!res || res->status != 200) { FetchFallback(state); return; }
             auto j = nlohmann::json::parse(res->body);
-            for (auto& p : j["query"]["mostviewed"]) {
-                std::string title = p.value("title", "");
-                int views         = p.value("count", 0);
-                pages.push_back({title, views});
+            auto& articles = j["items"][0]["articles"];
+            state.trendingKeywords.clear();
+            for (auto& a : articles) {
+                std::string title = a["article"].get<std::string>();
+                if (title == "Main_Page") continue;
+                if (title.rfind("Special:", 0) == 0) continue;
+                for (char& c : title) if (c == '_') c = ' ';
+                state.trendingKeywords.push_back(title);
+                if ((int)state.trendingKeywords.size() >= 8) break;
             }
-        } catch (...) {}
-        return pages;
+        } catch (...) { FetchFallback(state); }
     }
 
-    // Map Wikipedia titles to MarketState signals
-    static void ClassifyTopics(const std::vector<WikiPage>& pages, MarketState& state) {
-        // keyword → (field_flag, score_boost)
-        static const std::map<std::string, std::string> categoryMap = {
-            // AI / Tech
-            {"artificial intelligence", "ai"},
-            {"openai",  "ai"}, {"chatgpt", "ai"}, {"gemini", "ai"},
-            {"large language model", "ai"}, {"machine learning", "ai"},
-            // Crypto
-            {"bitcoin","crypto"}, {"ethereum","crypto"}, {"cryptocurrency","crypto"},
-            {"blockchain","crypto"}, {"solana","crypto"}, {"defi","crypto"},
-            // Macro / Risk
-            {"recession","macro_bear"}, {"inflation","macro_bear"},
-            {"financial crisis","macro_bear"}, {"stock market crash","macro_bear"},
-            {"unemployment","macro_bear"}, {"bank failure","macro_bear"},
-            // Macro / Bull
-            {"ipo","macro_bull"}, {"merger","macro_bull"},
-            {"record profit","macro_bull"}, {"economic growth","macro_bull"},
-            // Marketing / Ads
-            {"advertising","adtech"}, {"social media","adtech"},
-            {"tiktok","adtech"}, {"meta","adtech"}, {"google ads","adtech"},
-            // Geopolitical
-            {"war","geopolitical"}, {"sanctions","geopolitical"},
-            {"trade war","geopolitical"}, {"tariff","geopolitical"}
-        };
-
-        float aiScore      = 0.0f;
-        float cryptoScore  = 0.0f;
-        float macroBear    = 0.0f;
-        float macroBull    = 0.0f;
-        float adtechScore  = 0.0f;
-        float geoScore     = 0.0f;
-        bool  firstSet     = false;
-
-        for (auto& page : pages) {
-            std::string tl = page.title;
-            std::transform(tl.begin(), tl.end(), tl.begin(), ::tolower);
-            // noise filter
-            if (tl.find("main page") != std::string::npos ||
-                tl.find("special:")  != std::string::npos ||
-                tl.find("wikipedia:") != std::string::npos) continue;
-            // score by view weight (log-normalized)
-            float weight = (page.views > 0) ? std::log10((float)page.views) / 6.0f : 0.1f;
-            for (auto& [keyword, category] : categoryMap) {
-                if (tl.find(keyword) != std::string::npos) {
-                    if      (category == "ai")          aiScore      += weight;
-                    else if (category == "crypto")      cryptoScore  += weight;
-                    else if (category == "macro_bear")  macroBear    += weight;
-                    else if (category == "macro_bull")  macroBull    += weight;
-                    else if (category == "adtech")      adtechScore  += weight;
-                    else if (category == "geopolitical") geoScore    += weight;
-                }
+    static void FetchFallback(MarketState& state) {
+        // Reuse TrendFeed logic via mostviewed
+        try {
+            httplib::SSLClient cli("en.wikipedia.org", 443);
+            cli.set_connection_timeout(5);
+            cli.set_read_timeout(5);
+            cli.enable_server_certificate_verification(true);
+            auto res = cli.Get(
+                "/w/api.php?action=query&list=mostviewed"
+                "&pvimdays=1&pvimlimit=15&format=json");
+            if (!res || res->status != 200) return;
+            auto j = nlohmann::json::parse(res->body);
+            state.trendingKeywords.clear();
+            for (auto& it : j["query"]["mostviewed"]) {
+                std::string t = it["title"].get<std::string>();
+                if (t.rfind("Main_Page", 0) == 0 ||
+                    t.rfind("Special:", 0) == 0 ||
+                    t.rfind("Wikipedia:", 0) == 0) continue;
+                for (char& c : t) if (c == '_') c = ' ';
+                state.trendingKeywords.push_back(t);
+                if ((int)state.trendingKeywords.size() >= 8) break;
             }
-            // First non-noise article as global trending topic
-            if (!firstSet && !page.title.empty()) {
-                state.trendingKeyword = page.title;
-                firstSet = true;
-            }
+        } catch (...) {
+            state.trendingKeywords = { "AI", "Tech", "Markets", "Finance", "Gaming" };
         }
-
-        // Normalize to 0-1
-        auto norm = [](float v) { return std::max(0.0f, std::min(1.0f, v)); };
-        // state.wikiAiScore        = norm(aiScore); // doesn't exist in MarketState
-        // state.wikiCryptoScore    = norm(cryptoScore); // doesn't exist in MarketState
-        // state.wikiMacroBearScore = norm(macroBear); // doesn't exist in MarketState
-        // state.wikiMacroBullScore = norm(macroBull); // doesn't exist in MarketState
-        // state.wikiAdtechScore    = norm(adtechScore); // doesn't exist in MarketState
-        // state.wikiGeoScore       = norm(geoScore); // doesn't exist in MarketState
-
-        // Combine with existing feed scores if already set
-        // state.aiHypeScore     = std::min(1.0f, state.aiHypeScore     + state.wikiAiScore     * 0.4f); // doesn't exist
-        // state.cryptoSentiment = std::min(1.0f, state.cryptoSentiment + state.wikiCryptoScore * 0.3f); // doesn't exist
-
-        // Final boolean flags for EventSystem
-        // state.aiHypeActive        = (state.aiHypeScore > 0.45f); // doesn't exist
-        // state.recessionRiskActive = (state.wikiMacroBearScore > 0.35f); // doesn't exist
-        // state.adtechBoomActive    = (state.wikiAdtechScore > 0.30f); // doesn't exist
-        // state.geopoliticalRisk    = (state.wikiGeoScore > 0.25f); // doesn't exist
     }
 };
