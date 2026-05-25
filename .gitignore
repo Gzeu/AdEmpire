@@ -1,0 +1,27 @@
+# Build
+build/
+Build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dll
+AdEmpire
+AdEmpire.exe
+
+# ImGui binary (added as submodule, not source)
+# lib/imgui/  <- keep this as submodule
+
+# Save files
+save.json
+*.save
+
+# IDE
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db

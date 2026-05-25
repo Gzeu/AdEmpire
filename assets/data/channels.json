@@ -1,0 +1,56 @@
+[
+  {
+    "id": 0, "name": "Social Media",
+    "description": "Facebook, Instagram, TikTok campaigns",
+    "base_reach_per_dollar": 50,
+    "base_ctr": 0.025,
+    "base_conversion": 0.015,
+    "best_for": ["Food", "Fashion", "Gaming"],
+    "staff_role": "Social Media Manager"
+  },
+  {
+    "id": 1, "name": "SEO",
+    "description": "Organic search optimization",
+    "base_reach_per_dollar": 20,
+    "base_ctr": 0.04,
+    "base_conversion": 0.03,
+    "best_for": ["Tech", "Finance", "Health"],
+    "staff_role": "SEO Specialist"
+  },
+  {
+    "id": 2, "name": "Email Marketing",
+    "description": "Newsletters and drip campaigns",
+    "base_reach_per_dollar": 80,
+    "base_ctr": 0.02,
+    "base_conversion": 0.02,
+    "best_for": ["Finance", "Education", "Retail"],
+    "staff_role": "Content Creator"
+  },
+  {
+    "id": 3, "name": "Influencer",
+    "description": "Micro and macro influencer partnerships",
+    "base_reach_per_dollar": 30,
+    "base_ctr": 0.05,
+    "base_conversion": 0.025,
+    "best_for": ["Fashion", "Gaming", "Food"],
+    "staff_role": "PR Manager"
+  },
+  {
+    "id": 4, "name": "PR",
+    "description": "Press releases, media coverage",
+    "base_reach_per_dollar": 15,
+    "base_ctr": 0.01,
+    "base_conversion": 0.01,
+    "best_for": ["Finance", "Health", "Tech"],
+    "staff_role": "PR Manager"
+  },
+  {
+    "id": 5, "name": "Paid Search",
+    "description": "Google Ads, Bing PPC",
+    "base_reach_per_dollar": 40,
+    "base_ctr": 0.035,
+    "base_conversion": 0.03,
+    "best_for": ["Retail", "Finance", "Health"],
+    "staff_role": "Data Analyst"
+  }
+]
