@@ -1,155 +1,173 @@
 #include "NegotiationPanel.h"
-#include "../systems/NegotiationSystem.h"
 #include "../systems/FitScoreSystem.h"
 #include "imgui.h"
-#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+
+int  NegotiationPanel::s_clientId = -1;
+bool NegotiationPanel::s_active   = false;
+
+void NegotiationPanel::StartNegotiation(int clientId, GameState& gs) {
+    s_clientId = clientId;
+    s_active   = true;
+    gs.showNegotiation = true;
+
+    // init negotiation state
+    gs.negotiation.stage        = NegotiationStage::Intro;
+    gs.negotiation.clientMood   = 60.f;
+    gs.negotiation.pressure     = 0;
+    gs.negotiation.offeredBudget= 0.f;
+    gs.negotiation.won          = false;
+    gs.negotiation.closed       = false;
+
+    for (auto& cl : gs.clients)
+        if (cl.id == clientId)
+            gs.negotiation.offeredBudget = cl.budget;
+}
 
 void NegotiationPanel::Render(GameState& gs) {
-    if (!gs.showNegotiation) return;
-    auto& n = gs.negotiation;
+    if (!gs.showNegotiation || !s_active) return;
+
+    // Find client
+    Client* cl = nullptr;
+    for (auto& c : gs.clients)
+        if (c.id == s_clientId) { cl = &c; break; }
+    if (!cl) { s_active = false; return; }
 
     ImGui::SetNextWindowPos(ImVec2(200, 80), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(860, 560), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(880, 540), ImGuiCond_Always);
     ImGui::Begin("Negotiation", &gs.showNegotiation,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    // ── Find client
-    Client* cl = nullptr;
-    for (auto& c : gs.clients)
-        if (c.id == n.clientId) { cl = &c; break; }
-    if (!cl) { ImGui::Text("No client found."); ImGui::End(); return; }
-
-    // ── Header
-    ImGui::TextColored(ImVec4(0.3f,0.8f,1.f,1.f),
-        "Negotiating with: %s", cl->name.c_str());
-    ImGui::SameLine(500);
-    ImGui::TextColored(ImVec4(0.7f,0.7f,0.7f,1.f),
-        "Stage: %s", NegotiationSystem::GetStageTitle(n.stage).c_str());
+    // ─ LEFT: Client profile + FitScore
+    ImGui::BeginChild("##neg_left", ImVec2(280, -1), true);
+    ImGui::TextColored(ImVec4(0.3f,0.8f,1.f,1.f), "%s", cl->name.c_str());
+    ImGui::Text("%s", IndustryNames[(int)cl->industry]);
+    ImGui::Text("Budget: $%.0f/mo", cl->budget);
     ImGui::Separator();
 
-    // ── Two columns
-    ImGui::Columns(2, "negcols", true);
+    FitScore fit = FitScoreSystem::Calculate(*cl, gs);
+    float total  = fit.total();
+    float winP   = FitScoreSystem::GetWinProbability(*cl, gs);
 
-    // LEFT: client info + mood + fit
-    ImGui::TextColored(ImVec4(1.f,0.8f,0.3f,1.f), "Client Profile");
-    ImGui::Text("Industry: %s", IndustryNames[(int)cl->industry]);
-    ImGui::Text("Archetype: %s", ArchetypeNames[(int)cl->archetype]);
-    ImGui::Text("Budget: $%.0f/mo", cl->budget);
+    ImGui::TextColored(ImVec4(1.f,0.8f,0.2f,1.f), "Fit Score: %.0f / 100", total);
+    char fsl[16]; snprintf(fsl,16,"Fit %.0f%%",total);
+    ImGui::ProgressBar(total/100.f, ImVec2(-1,14), fsl);
     ImGui::Spacing();
+    ImGui::Text("  Channel fit:    %.0f", fit.channel);
+    ImGui::Text("  Industry exp:   %.0f", fit.industry);
+    ImGui::Text("  Reputation:     %.0f", fit.reputation);
+    ImGui::Text("  Capacity:       %.0f", fit.capacity);
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.4f,1.f,0.5f,1.f), "Win chance: %.0f%%", winP*100.f);
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    // ─ RIGHT: Negotiation dialog
+    ImGui::BeginChild("##neg_right", ImVec2(-1, -1), true);
+
+    static const char* STAGE_NAMES[] = {
+        "Introduction","Budget Discussion","Channel Selection",
+        "Contract Terms","Final Offer","Closed"
+    };
+    int stageIdx = (int)gs.negotiation.stage;
+    ImGui::TextColored(ImVec4(0.8f,0.8f,0.3f,1.f),
+        "Stage %d/5: %s", stageIdx+1, STAGE_NAMES[stageIdx]);
+    ImGui::Separator();
 
     // Mood bar
-    ImVec4 moodCol = n.clientMood > 0.65f ? ImVec4(0.3f,1.f,0.4f,1.f)
-                   : n.clientMood > 0.40f ? ImVec4(1.f,0.8f,0.2f,1.f)
-                   : ImVec4(1.f,0.3f,0.3f,1.f);
-    char moodLabel[32];
-    snprintf(moodLabel, 32, "Mood: %.0f%%", n.clientMood * 100.f);
+    float mood = gs.negotiation.clientMood;
+    ImVec4 moodCol = mood > 65 ? ImVec4(0.3f,1.f,0.3f,1.f)
+                   : mood > 35 ? ImVec4(1.f,0.8f,0.2f,1.f)
+                               : ImVec4(1.f,0.3f,0.3f,1.f);
+    char moodLabel[24]; snprintf(moodLabel,24,"Mood %.0f%%",mood);
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, moodCol);
-    ImGui::ProgressBar(n.clientMood, ImVec2(-1, 18), moodLabel);
+    ImGui::ProgressBar(mood/100.f, ImVec2(-1,18), moodLabel);
     ImGui::PopStyleColor();
+    ImGui::Text("Pressure: %d/3", gs.negotiation.pressure);
     ImGui::Spacing();
 
-    // FitScore breakdown
-    ImGui::TextColored(ImVec4(0.7f,0.7f,1.f,1.f), "Fit Score: %.0f / 100", n.fitScore.total());
-    ImGui::Text("  Channel Fit:    %.0f%%", n.fitScore.channel * 100.f);
-    ImGui::Text("  Industry Exp:   %.0f%%", n.fitScore.industry * 100.f);
-    ImGui::Text("  Reputation:     %.0f%%", n.fitScore.reputation * 100.f);
-    ImGui::Text("  Capacity:       %.0f%%", n.fitScore.capacity * 100.f);
-    ImGui::Spacing();
-
-    float winChance = FitScoreSystem::WinChance(n.fitScore, gs.stats.reputation);
-    winChance += (n.clientMood - 0.5f) * 0.4f;
-    winChance = std::clamp(winChance, 0.f, 0.97f);
-    ImGui::TextColored(ImVec4(0.4f,1.f,0.6f,1.f),
-        "Win Probability: %.0f%%", winChance * 100.f);
-
-    // Pressure warning
-    if (n.playerPressure > 0)
-        ImGui::TextColored(ImVec4(1.f,0.5f,0.2f,1.f),
-            "Pressure: %d/3 (too high = client walks)", n.playerPressure);
-
-    ImGui::NextColumn();
-
-    // RIGHT: dialogue + actions
-    ImGui::TextColored(ImVec4(1.f,0.8f,0.3f,1.f), "Client Says:");
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.10f,0.12f,0.20f,0.9f));
-    ImGui::BeginChild("##dialogue", ImVec2(-1, 80), true);
-    ImGui::TextWrapped("%s", n.lastMessage.c_str());
+    // Stage dialog text
+    static const char* DIALOGS[] = {
+        "Nice to meet you! We've heard great things about your agency.",
+        "We have a monthly budget in mind. Let's discuss what works.",
+        "Which channels do you recommend for our industry?",
+        "Let's talk about contract length and terms.",
+        "This is our final offer. Do we have a deal?",
+        "Negotiation complete."
+    };
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f,0.1f,0.18f,1.f));
+    ImGui::BeginChild("##dialog_box", ImVec2(-1, 60), true);
+    ImGui::TextWrapped("%s", DIALOGS[stageIdx]);
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::Spacing();
 
-    // Offer display
-    ImGui::Text("Your Offer:");
-    ImGui::Text("  Budget:   $%.0f/mo", n.offeredBudget);
-    ImGui::Text("  Channel:  %s",  ChannelNames[(int)n.offeredChannel]);
-    ImGui::Text("  Contract: %s",  ContractTypeNames[(int)n.offeredContract]);
-    ImGui::Separator();
+    // Budget display
+    ImGui::Text("Offered budget: $%.0f/mo", gs.negotiation.offeredBudget);
+    ImGui::Spacing();
 
-    // Action buttons
-    if (n.stage != NegotiationStage::Closed) {
-        ImGui::TextColored(ImVec4(0.6f,0.9f,1.f,1.f), "Actions:");
-        float bw = 195.f;
-
-        if (ImGui::Button("Increase Budget (+10%)",  ImVec2(bw, 30)))
-            NegotiationSystem::IncreaseOffer(gs);
-        ImGui::SameLine();
-        if (ImGui::Button("Decrease Budget (-10%)",  ImVec2(bw, 30)))
-            NegotiationSystem::DecreaseOffer(gs);
-
-        if (ImGui::Button("Offer Annual Contract",   ImVec2(bw, 30)))
-            NegotiationSystem::OfferLongContract(gs);
-        ImGui::SameLine();
-        if (ImGui::Button("Offer Monthly Contract",  ImVec2(bw, 30)))
-            NegotiationSystem::PressForShortContract(gs);
-
-        // Channel selector
-        ImGui::Text("Pitch Channel:");
-        for (int i = 0; i < 6; i++) {
-            if (i > 0) ImGui::SameLine();
-            bool sel = ((int)n.offeredChannel == i);
-            if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.7f,0.2f,1.f));
-            if (ImGui::Button(ChannelNames[i], ImVec2(0, 26)))
-                n.offeredChannel = (ChannelType)i;
-            if (sel) ImGui::PopStyleColor();
-        }
-        ImGui::Spacing();
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.5f,0.9f,1.f));
-        if (ImGui::Button("Build Rapport (+mood)",   ImVec2(bw, 30)))
-            NegotiationSystem::BuildRapport(gs);
-        ImGui::PopStyleColor();
-        ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f,0.4f,0.1f,1.f));
-        if (ImGui::Button("Press for Deal (risky)",  ImVec2(bw, 30)))
-            NegotiationSystem::PressForDeal(gs);
-        ImGui::PopStyleColor();
-
-        ImGui::Spacing();
-        if (n.stage == NegotiationStage::FinalOffer) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.7f,0.3f,1.f));
-            if (ImGui::Button("CLOSE DEAL", ImVec2(390, 40)))
-                NegotiationSystem::Resolve(gs);
-            ImGui::PopStyleColor();
-        } else {
-            if (ImGui::Button("Next Stage >>", ImVec2(190, 34)))
-                NegotiationSystem::Advance(gs);
-        }
-        ImGui::SameLine();
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f,0.1f,0.1f,1.f));
-        if (ImGui::Button("Cancel Negotiation", ImVec2(190, 34)))
-            NegotiationSystem::Cancel(gs);
-        ImGui::PopStyleColor();
-    } else {
-        // Closed — show result
-        if (n.wonDeal)
-            ImGui::TextColored(ImVec4(0.3f,1.f,0.4f,1.f), "✅ Deal won! Client added.");
+    if (gs.negotiation.closed) {
+        if (gs.negotiation.won)
+            ImGui::TextColored(ImVec4(0.3f,1.f,0.3f,1.f), "\xE2\x9C\x94 Deal closed! Client acquired.");
         else
-            ImGui::TextColored(ImVec4(1.f,0.3f,0.3f,1.f), "❌ Deal lost.");
-        ImGui::Text("%s", n.lastMessage.c_str());
-        if (ImGui::Button("Close", ImVec2(200, 36)))
+            ImGui::TextColored(ImVec4(1.f,0.3f,0.3f,1.f), "\xE2\x9C\x98 No deal. Client walked away.");
+        if (ImGui::Button("Close", ImVec2(-1,36))) {
+            s_active = false;
             gs.showNegotiation = false;
-    }
+        }
+    } else {
+        // Action buttons
+        float bw = 190.f;
+        if (ImGui::Button("Build Rapport (+7% mood)", ImVec2(bw,30))) {
+            gs.negotiation.clientMood = std::clamp(gs.negotiation.clientMood + 7.f, 0.f, 100.f);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Increase Offer (+10%)", ImVec2(bw,30)))
+            gs.negotiation.offeredBudget *= 1.1f;
+        ImGui::SameLine();
+        if (ImGui::Button("Decrease Offer (-10%)", ImVec2(bw,30))) {
+            gs.negotiation.offeredBudget *= 0.9f;
+            gs.negotiation.clientMood -= 5.f;
+        }
 
-    ImGui::Columns(1);
+        if (ImGui::Button("Press for Deal (-mood)", ImVec2(bw,30))) {
+            gs.negotiation.clientMood -= 10.f;
+            gs.negotiation.pressure++;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Offer Long Contract", ImVec2(bw,30)))
+            gs.negotiation.clientMood += 5.f;
+        ImGui::SameLine();
+        if (ImGui::Button("Advance Stage", ImVec2(bw,30))) {
+            if (stageIdx < 4)
+                gs.negotiation.stage = (NegotiationStage)(stageIdx + 1);
+            else {
+                // Resolve
+                float resolveChance = FitScoreSystem::GetWinProbability(*cl, gs);
+                resolveChance += (gs.negotiation.clientMood - 50.f) * 0.005f;
+                resolveChance -= gs.negotiation.pressure * 0.1f;
+                resolveChance  = std::clamp(resolveChance, 0.02f, 0.97f);
+
+                gs.negotiation.won = ((float)(rand()%100)/100.f < resolveChance);
+                gs.negotiation.closed = true;
+
+                if (gs.negotiation.won) {
+                    cl->active    = true;
+                    cl->available = false;
+                    cl->budget    = gs.negotiation.offeredBudget;
+                    gs.stats.clientsAcquired++;
+                    gs.playerMarketShare = std::clamp(gs.playerMarketShare + 1.5f, 0.f, 100.f);
+                }
+            }
+        }
+
+        if (gs.negotiation.pressure >= 3) {
+            ImGui::TextColored(ImVec4(1.f,0.3f,0.3f,1.f),
+                "Client is uncomfortable! One more push will end the deal.");
+        }
+    }
+    ImGui::EndChild();
     ImGui::End();
 }

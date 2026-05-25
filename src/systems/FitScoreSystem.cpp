@@ -1,74 +1,68 @@
 #include "FitScoreSystem.h"
 #include <algorithm>
-#include <cmath>
 
-bool FitScoreSystem::HasChannelExpertise(const Client& cl, const GameState& gs) {
-    ChannelType best = IndustryBestChannel[(int)cl.industry];
-    for (auto& s : gs.staff)
-        if ((int)s.role == (int)best && s.skill > 0.5f)
-            return true;
-    return false;
-}
-
-float FitScoreSystem::IndustryBonus(const Client& cl, const GameState& gs) {
-    auto it = gs.stats.industryClientCount.find((int)cl.industry);
-    if (it == gs.stats.industryClientCount.end()) return 1.0f;
-    int count = it->second;
-    return std::min(1.0f + count * 0.10f, 1.50f); // +10% per past client, max +50%
-}
+// Best channel per industry
+static const ChannelType INDUSTRY_BEST_CHANNEL[] = {
+    ChannelType::Social,     // Food
+    ChannelType::Influencer, // Fashion
+    ChannelType::SEO,        // Tech
+    ChannelType::PaidSearch, // Finance
+    ChannelType::SEO,        // Health
+    ChannelType::Email,      // Education
+    ChannelType::PaidSearch, // Retail
+    ChannelType::Social      // Gaming
+};
 
 FitScore FitScoreSystem::Calculate(const Client& cl, const GameState& gs) {
-    FitScore fs;
+    FitScore score;
 
-    // Channel fit: do we have the right staff?
-    fs.channel = HasChannelExpertise(cl, gs) ? 1.0f : 0.4f;
+    // 1. Channel fit (0-25): does agency have staff for best channel?
+    ChannelType bestCh = INDUSTRY_BEST_CHANNEL[(int)cl.industry];
+    float channelSkill = 0.f;
+    for (auto& s : gs.staff)
+        if ((int)s.role == (int)bestCh)
+            channelSkill = std::max(channelSkill, s.skill);
+    score.channel = channelSkill * 25.f;
 
-    // Industry fit: experience with this industry
-    fs.industry = std::min((IndustryBonus(cl, gs) - 1.0f) / 0.5f, 1.0f);
+    // 2. Industry experience (0-25): prior clients in same industry
+    int sameIndustry = 0;
+    for (auto& c : gs.clients)
+        if (c.industry == cl.industry && !c.available && c.id != cl.id)
+            sameIndustry++;
+    score.industry = std::min(sameIndustry * 5.f, 25.f);
 
-    // Reputation fit: client expects minimum reputation
-    float repRequired = cl.budget / 500.f; // $500 budget needs rep 1, $15000 needs rep 30
-    fs.reputation = std::min(gs.stats.reputation / std::max(repRequired, 1.f), 1.f);
+    // 3. Reputation fit (0-25): big clients need established agencies
+    float repRequired = cl.budget / 500.f; // $500 budget = 1 rep needed
+    float repRatio = (repRequired > 0)
+        ? std::min(gs.stats.reputation / repRequired, 1.f) : 1.f;
+    score.reputation = repRatio * 25.f;
 
-    // Capacity fit: do we have room?
+    // 4. Capacity fit (0-25): penalty if overloaded
     int activeClients = 0;
     for (auto& c : gs.clients) if (c.active) activeClients++;
-    fs.capacity = gs.capacity.maxClients > 0
-        ? std::max(0.f, 1.f - (float)activeClients / gs.capacity.maxClients)
+    int maxCap = 2 + (int)gs.staff.size();
+    float capRatio = (maxCap > 0)
+        ? 1.f - ((float)activeClients / (float)maxCap)
         : 0.f;
+    score.capacity = std::max(0.f, capRatio * 25.f);
 
-    return fs;
-}
-
-float FitScoreSystem::WinChance(const FitScore& fs, float reputation) {
-    float base = fs.total() / 100.f;    // 0-1
-    float repBonus = reputation * 0.003f;
-    return std::clamp(base * 0.7f + repBonus + 0.15f, 0.05f, 0.97f);
+    return score;
 }
 
 void FitScoreSystem::UpdateCapacity(GameState& gs) {
-    gs.capacity.maxClients = 1; // always at least 1 (solo founder)
-    for (auto& s : gs.staff)
-        gs.capacity.maxClients += RoleCapacity[(int)s.role];
+    int active = 0;
+    for (auto& c : gs.clients) if (c.active) active++;
+    int maxCap = 2 + (int)gs.staff.size();
+    gs.capacity.maxClients     = maxCap;
+    gs.capacity.utilizationPct = maxCap > 0 ? (float)active / maxCap * 100.f : 0.f;
+    gs.capacity.overloaded     = active > maxCap;
+    gs.capacity.burnoutRisk    = gs.capacity.utilizationPct > 80.f;
+}
 
-    gs.capacity.currentClients = 0;
-    for (auto& c : gs.clients) if (c.active) gs.capacity.currentClients++;
-
-    gs.capacity.utilizationPct = gs.capacity.maxClients > 0
-        ? (float)gs.capacity.currentClients / gs.capacity.maxClients
-        : 1.f;
-    gs.capacity.overloaded = gs.capacity.utilizationPct > 1.0f;
-
-    // Agency burnout = average staff burnout
-    float totalBurnout = 0.f;
-    for (auto& s : gs.staff) {
-        // Burnout rises when overloaded, falls when normal
-        float targetBurnout = gs.capacity.overloaded
-            ? s.burnout + 0.05f
-            : std::max(0.f, s.burnout - 0.02f);
-        s.burnout = std::clamp(targetBurnout, 0.f, 1.f);
-        totalBurnout += s.burnout;
-    }
-    gs.capacity.burnoutRisk = gs.staff.empty() ? 0.f
-        : totalBurnout / gs.staff.size();
+float FitScoreSystem::GetWinProbability(const Client& cl, const GameState& gs) {
+    FitScore fit = Calculate(cl, gs);
+    float total  = fit.total();
+    // Base 20% + fit contribution up to 70% + rep bonus up to 10%
+    float prob = 0.20f + (total / 100.f) * 0.70f + gs.stats.reputation * 0.001f;
+    return std::clamp(prob, 0.05f, 0.95f);
 }

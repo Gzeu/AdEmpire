@@ -11,6 +11,9 @@
 #include "systems/AICompetitor.h"
 #include "systems/SaveSystem.h"
 #include "systems/AchievementsSystem.h"
+#include "systems/FitScoreSystem.h"
+#include "systems/GoalSystem.h"
+#include "systems/SpecializationSystem.h"
 #include "ui/Theme.h"
 #include "ui/MainMenu.h"
 #include "ui/Dashboard.h"
@@ -21,6 +24,9 @@
 #include "ui/StaffPanel.h"
 #include "ui/AchievementsPanel.h"
 #include "ui/SettingsPanel.h"
+#include "ui/NegotiationPanel.h"
+#include "ui/GoalsPanel.h"
+#include "ui/SpecializationPanel.h"
 
 static GameState gs;
 static bool      gameStarted       = false;
@@ -42,20 +48,23 @@ void RenderNavbar() {
         if (ImGui::Button(label)) {
             gs.showDashboard = gs.showCampaigns = gs.showClients =
             gs.showStaff = gs.showMarketMap = gs.showNewsfeed =
-            gs.showSettings = gs.showAchievements = false;
+            gs.showSettings = gs.showAchievements =
+            gs.showGoals = gs.showSpecializations = gs.showNegotiation = false;
             flag = true;
         }
         ImGui::SameLine();
     };
 
-    navBtn(" Dashboard ",    gs.showDashboard);
-    navBtn(" Campaigns ",    gs.showCampaigns);
-    navBtn(" Clients ",      gs.showClients);
-    navBtn(" Staff ",        gs.showStaff);
-    navBtn(" Market Map ",   gs.showMarketMap);
-    navBtn(" Newsfeed ",     gs.showNewsfeed);
-    navBtn(" \xF0\x9F\x8F\x86 Achieve ", gs.showAchievements);
-    navBtn(" \xE2\x9A\x99 Settings ",    gs.showSettings);
+    navBtn(" Dashboard ",      gs.showDashboard);
+    navBtn(" Campaigns ",      gs.showCampaigns);
+    navBtn(" Clients ",        gs.showClients);
+    navBtn(" Staff ",          gs.showStaff);
+    navBtn(" Market Map ",     gs.showMarketMap);
+    navBtn(" Newsfeed ",       gs.showNewsfeed);
+    navBtn(" Goals ",          gs.showGoals);
+    navBtn(" Specializations ",gs.showSpecializations);
+    navBtn(" \xF0\x9F\x8F\x86 Achieve ",   gs.showAchievements);
+    navBtn(" \xE2\x9A\x99 Settings ",       gs.showSettings);
 
     ImGui::TextColored(ImVec4(0.3f,1.f,0.5f,1.f),
         "   $%.0f | Mo %d/%d | Share %.1f%%",
@@ -100,6 +109,9 @@ void RenderGame() {
     AchievementsPanel::Render(gs);
     SettingsPanel::Render(gs);
     AchievementsSystem::RenderPopups();
+    NegotiationPanel::Render(gs);
+    GoalsPanel::Render(gs);
+    SpecializationPanel::Render(gs);
 
     // FPS overlay
     if (SettingsPanel::s_data.showFPS) {
@@ -117,14 +129,16 @@ void RenderGame() {
     if (gs.victory) {
         ImVec2 c = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f,0.5f));
-        ImGui::SetNextWindowSize(ImVec2(420,220));
+        ImGui::SetNextWindowSize(ImVec2(460,260));
         ImGui::Begin("VICTORY!", nullptr, ImGuiWindowFlags_NoDecoration);
         ImGui::SetWindowFontScale(2.2f);
         ImGui::TextColored(ImVec4(0.3f,1.f,0.4f,1.f), "  VICTORY!");
         ImGui::SetWindowFontScale(1.f);
         ImGui::Text("You reached 35%% market share!");
-        ImGui::Text("Total Revenue: $%.0f", gs.stats.totalRevenue);
-        ImGui::Text("Months played: %d", gs.stats.monthsPlayed);
+        ImGui::Text("Total Revenue:    $%.0f", gs.stats.totalRevenue);
+        ImGui::Text("Months played:    %d",    gs.stats.monthsPlayed);
+        ImGui::Text("Clients acquired: %d",    gs.stats.clientsAcquired);
+        ImGui::Text("Best month:       $%.0f", gs.stats.bestMonthRevenue);
         ImGui::Spacing();
         if (ImGui::Button("Play Again", ImVec2(-1,40))) {
             gs = GameState();
@@ -163,7 +177,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(1280, 720,
-        "AdEmpire \u2014 Marketing Tycoon", nullptr, nullptr);
+        "AdEmpire \u2014 Marketing Tycoon v0.2", nullptr, nullptr);
     if (!window) return -1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -177,7 +191,6 @@ int main() {
     ImGui_ImplOpenGL3_Init("#version 330");
     Theme::ApplyDarkMarketing();
 
-    // Auto-save logic
     int monthsSinceAutoSave = 0;
 
     while (!glfwWindowShouldClose(window)) {
@@ -187,13 +200,23 @@ int main() {
         ImGui::NewFrame();
 
         if (!gameStarted) {
-            if (MainMenu::Render(gs)) gameStarted = true;
+            if (MainMenu::Render(gs)) {
+                // v0.2 systems init on new game
+                GoalSystem::InitQuarterlyGoals(gs);
+                SpecializationSystem::Init(gs);
+                gameStarted = true;
+            }
         } else {
             if (pendingNextMonth) {
                 EventSystem::TryTriggerEvent(gs);
                 AICompetitor::ProcessTurn(gs);
                 Simulation::AdvanceMonth(gs);
                 AchievementsSystem::CheckAll(gs);
+                // v0.2 monthly updates
+                FitScoreSystem::UpdateCapacity(gs);
+                GoalSystem::UpdateGoals(gs);
+                GoalSystem::CheckCompletion(gs);
+                SpecializationSystem::Update(gs);
                 // Auto-save
                 monthsSinceAutoSave++;
                 if (SettingsPanel::s_data.autoSave &&

@@ -1,38 +1,46 @@
 #include "SpecializationSystem.h"
 #include <algorithm>
 
-void SpecializationSystem::Init(GameState& gs) {
-    gs.specializations = {
-        {"Food & Bev Expert",   "Bonus on all Food campaigns",   ClientIndustry::Food,      1.25f, 2, false},
-        {"Fashion Authority",   "Bonus on Fashion campaigns",    ClientIndustry::Fashion,   1.30f, 2, false},
-        {"Tech Agency Pro",     "Bonus on Tech campaigns",       ClientIndustry::Tech,      1.35f, 3, false},
-        {"FinTech Specialist",  "Bonus on Finance campaigns",    ClientIndustry::Finance,   1.40f, 3, false},
-        {"Health Marketer",     "Bonus on Health campaigns",     ClientIndustry::Health,    1.30f, 2, false},
-        {"EduTech Partner",     "Bonus on Education campaigns",  ClientIndustry::Education, 1.25f, 2, false},
-        {"Retail Dominator",    "Bonus on Retail campaigns",     ClientIndustry::Retail,    1.35f, 3, false},
-        {"Gaming Agency",       "Bonus on Gaming campaigns",     ClientIndustry::Gaming,    1.45f, 2, false},
-    };
-}
+// clients required to unlock per industry
+static const int UNLOCK_THRESHOLD[] = { 2, 2, 3, 3, 2, 2, 2, 2 };
+// bonus multiplier per industry
+static const float SPEC_BONUS[]     = { 1.25f, 1.30f, 1.35f, 1.40f, 1.30f, 1.25f, 1.25f, 1.45f };
 
-void SpecializationSystem::Update(GameState& gs) {
-    for (auto& sp : gs.specializations) {
-        if (sp.unlocked) continue;
-        auto it = gs.stats.industryClientCount.find((int)sp.industry);
-        if (it != gs.stats.industryClientCount.end()
-            && it->second >= sp.clientsRequired)
-            sp.unlocked = true;
+void SpecializationSystem::Init(GameState& gs) {
+    gs.specializations.clear();
+    for (int i = 0; i < 8; i++) {
+        Specialization s;
+        s.industry         = (ClientIndustry)i;
+        s.bonusMultiplier  = SPEC_BONUS[i];
+        s.clientsRequired  = UNLOCK_THRESHOLD[i];
+        s.clientsServed    = 0;
+        s.unlocked         = false;
+        gs.specializations.push_back(s);
     }
 }
 
-bool SpecializationSystem::IsUnlocked(ClientIndustry industry, const GameState& gs) {
-    for (auto& sp : gs.specializations)
-        if (sp.industry == industry && sp.unlocked) return true;
-    return false;
+void SpecializationSystem::Update(GameState& gs) {
+    // Count completed/active clients per industry
+    for (auto& spec : gs.specializations) {
+        int count = 0;
+        for (auto& cl : gs.clients)
+            if (cl.industry == spec.industry && !cl.available)
+                count++;
+        spec.clientsServed = count;
+        if (!spec.unlocked && count >= spec.clientsRequired)
+            spec.unlocked = true;
+    }
 }
 
-float SpecializationSystem::GetBonus(const Client& cl, const GameState& gs) {
-    for (auto& sp : gs.specializations)
-        if (sp.industry == cl.industry && sp.unlocked)
-            return sp.bonusMultiplier;
+float SpecializationSystem::GetBonus(ClientIndustry industry, const GameState& gs) {
+    for (auto& s : gs.specializations)
+        if (s.industry == industry && s.unlocked)
+            return s.bonusMultiplier;
     return 1.0f;
+}
+
+bool SpecializationSystem::IsUnlocked(ClientIndustry industry, const GameState& gs) {
+    for (auto& s : gs.specializations)
+        if (s.industry == industry) return s.unlocked;
+    return false;
 }
