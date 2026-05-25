@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 enum class ChannelType {
     Social, SEO, Email, Influencer, PR, PaidSearch
@@ -9,6 +10,16 @@ enum class ChannelType {
 static const char* ChannelNames[] = {
     "Social Media", "SEO", "Email", "Influencer", "PR", "Paid Search"
 };
+
+// ── std::hash specialization (required for unordered_map<ChannelType, float>)
+// Needed on GCC 11+, Clang, and MSVC — placed before any usage.
+namespace std {
+    template<> struct hash<ChannelType> {
+        size_t operator()(ChannelType c) const noexcept {
+            return hash<int>{}(static_cast<int>(c));
+        }
+    };
+}
 
 struct Campaign {
     int         id;
@@ -96,23 +107,23 @@ struct NewsEvent {
 };
 
 struct AgencyStats {
-    float totalRevenue      = 0.f;
-    float totalSpent        = 0.f;
+    float totalRevenue       = 0.f;
+    float totalSpent         = 0.f;
     int   campaignsCompleted = 0;
-    int   clientsAcquired   = 0;
-    int   clientsLost       = 0;
-    int   monthsPlayed      = 0;
-    float bestMonthRevenue  = 0.f;
-    float reputation        = 0.f;
+    int   clientsAcquired    = 0;
+    int   clientsLost        = 0;
+    int   monthsPlayed       = 0;
+    float bestMonthRevenue   = 0.f;
+    float reputation         = 0.f;
 };
 
 struct GameState {
-    std::string agencyName     = "My Agency";
-    float       budget         = 10000.f;
-    float       monthlyRevenue = 0.f;
-    float       monthlyExpenses= 0.f;
-    int         month          = 1;
-    int         year           = 2024;
+    std::string agencyName      = "My Agency";
+    float       budget          = 10000.f;
+    float       monthlyRevenue  = 0.f;
+    float       monthlyExpenses = 0.f;
+    int         month           = 1;
+    int         year            = 2024;
 
     std::vector<Client>      clients;
     std::vector<Campaign>    campaigns;
@@ -132,7 +143,7 @@ struct GameState {
     bool showMarketMap    = false;
     bool showNewsfeed     = false;
     bool showSettings     = false;
-    bool showAchievements = false;  // NEW
+    bool showAchievements = false;
     bool gameOver         = false;
     bool victory          = false;
 
