@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdEmpire — Marketing Tycoon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="dark"]{
+  --color-bg:#0d0c0b;
+  --color-surface:#131211;
+  --color-surface-2:#181614;
+  --color-surface-offset:#1e1b18;
+  --color-border:rgba(255,255,255,0.08);
+  --color-divider:rgba(255,255,255,0.05);
+  --color-text:#e8e4df;
+  --color-text-muted:#8a8480;
+  --color-text-faint:#4a4744;
+  --color-primary:#e8a030;
+  --color-primary-hover:#f5b548;
+  --color-primary-dim:rgba(232,160,48,0.15);
+  --color-primary-glow:rgba(232,160,48,0.08);
+  --color-accent:#c94b2a;
+  --color-green:#5a9e45;
+  --color-green-dim:rgba(90,158,69,0.15);
+  --color-blue:#4a82c4;
+  --color-blue-dim:rgba(74,130,196,0.15);
+  --radius-sm:0.375rem;--radius-md:0.5rem;--radius-lg:0.75rem;--radius-xl:1rem;--radius-full:9999px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:0 16px 48px rgba(0,0,0,0.6);
+  --font-display:"DM Serif Display",Georgia,serif;
+  --font-body:"DM Sans","Helvetica Neue",sans-serif;
+  --text-xs:clamp(0.75rem,0.7rem + 0.25vw,0.875rem);
+  --text-sm:clamp(0.875rem,0.8rem + 0.35vw,1rem);
+  --text-base:clamp(1rem,0.95rem + 0.25vw,1.125rem);
+  --text-lg:clamp(1.125rem,1rem + 0.75vw,1.5rem);
+  --text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
+  --text-2xl:clamp(2rem,1.2rem + 2.5vw,3.5rem);
+  --text-hero:clamp(3rem,0.5rem + 7vw,7rem);
+  --space-1:0.25rem;--space-2:0.5rem;--space-3:0.75rem;--space-4:1rem;
+  --space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;
+  --space-16:4rem;--space-20:5rem;--space-24:6rem;
+  --transition:180ms cubic-bezier(0.16,1,0.3,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;}
+body{font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-bg);min-height:100dvh;overflow-x:hidden;}
+img{display:block;max-width:100%;}
+a,button{transition:color var(--transition),background var(--transition),opacity var(--transition),transform var(--transition),box-shadow var(--transition);}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit;}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:var(--space-4) var(--space-6);display:flex;align-items:center;justify-content:space-between;background:rgba(13,12,11,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--color-border);}
+.nav-logo{display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);}
+.nav-logo-text{font-family:var(--font-display);font-size:var(--text-lg);letter-spacing:-0.02em;}
+.nav-links{display:flex;align-items:center;gap:var(--space-6);}
+.nav-links a{text-decoration:none;color:var(--color-text-muted);font-size:var(--text-sm);font-weight:500;}
+.nav-links a:hover{color:var(--color-text);}
+.nav-cta{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);background:var(--color-primary);color:#1a1006;border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:600;text-decoration:none;}
+.nav-cta:hover{background:var(--color-primary-hover);transform:translateY(-1px);box-shadow:0 4px 16px rgba(232,160,48,0.3);}
+.hero{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:var(--space-24) var(--space-6) var(--space-16);position:relative;overflow:hidden;}
+.hero-glow{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(ellipse,rgba(232,160,48,0.06) 0%,transparent 70%);pointer-events:none;}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(var(--color-border) 1px,transparent 1px),linear-gradient(90deg,var(--color-border) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 60% at 50% 50%,black 0%,transparent 100%);opacity:0.4;}
+.hero-badge{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-1) var(--space-3);background:var(--color-primary-dim);border:1px solid rgba(232,160,48,0.2);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600;color:var(--color-primary);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:var(--space-6);position:relative;}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--color-primary);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
+.hero h1{font-family:var(--font-display);font-size:var(--text-hero);line-height:1.05;letter-spacing:-0.03em;margin-bottom:var(--space-6);position:relative;max-width:14ch;}
+.hero h1 em{font-style:italic;color:var(--color-primary);}
+.hero-subtitle{font-size:var(--text-lg);color:var(--color-text-muted);max-width:52ch;line-height:1.6;margin-bottom:var(--space-10);position:relative;}
+.hero-actions{display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;justify-content:center;position:relative;}
+.btn-primary{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-8);background:var(--color-primary);color:#1a1006;border-radius:var(--radius-md);font-size:var(--text-base);font-weight:700;text-decoration:none;letter-spacing:-0.01em;}
+.btn-primary:hover{background:var(--color-primary-hover);transform:translateY(-2px);box-shadow:0 8px 32px rgba(232,160,48,0.35);}
+.btn-ghost{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-6);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-base);font-weight:500;color:var(--color-text-muted);text-decoration:none;}
+.btn-ghost:hover{border-color:rgba(255,255,255,0.2);color:var(--color-text);background:var(--color-surface);}
+.hero-stats{display:flex;align-items:center;gap:var(--space-8);margin-top:var(--space-12);padding-top:var(--space-8);border-top:1px solid var(--color-divider);position:relative;}
+.stat-item{text-align:center;}
+.stat-num{font-family:var(--font-display);font-size:var(--text-xl);color:var(--color-text);display:block;}
+.stat-label{font-size:var(--text-xs);color:var(--color-text-faint);text-transform:uppercase;letter-spacing:0.06em;}
+.section{padding:clamp(var(--space-16),8vw,var(--space-24)) var(--space-6);}
+.section-inner{max-width:1100px;margin:0 auto;}
+.section-label{font-size:var(--text-xs);font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-primary);margin-bottom:var(--space-3);}
+.section-title{font-family:var(--font-display);font-size:var(--text-2xl);line-height:1.1;letter-spacing:-0.02em;margin-bottom:var(--space-4);}
+.section-desc{font-size:var(--text-base);color:var(--color-text-muted);max-width:55ch;line-height:1.7;}
+.preview-section{background:var(--color-surface);}
+.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-8);align-items:start;margin-top:var(--space-12);}
+.preview-ui{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow-lg);}
+.ui-titlebar{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--color-surface-offset);border-bottom:1px solid var(--color-border);}
+.ui-dot{width:10px;height:10px;border-radius:50%;}
+.ui-dot.red{background:#c94b2a;}.ui-dot.yellow{background:#e8a030;}.ui-dot.green{background:#5a9e45;}
+.ui-title{font-size:var(--text-xs);color:var(--color-text-muted);margin-left:auto;margin-right:auto;font-weight:500;}
+.ui-body{padding:var(--space-4);}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3);margin-bottom:var(--space-4);}
+.kpi-card{background:var(--color-surface-offset);border-radius:var(--radius-md);padding:var(--space-3);border:1px solid var(--color-border);}
+.kpi-val{font-family:var(--font-display);font-size:var(--text-xl);display:block;color:var(--color-text);}
+.kpi-val.green{color:var(--color-green);}.kpi-val.gold{color:var(--color-primary);}
+.kpi-lbl{font-size:var(--text-xs);color:var(--color-text-faint);margin-top:2px;}
+.kpi-delta{font-size:var(--text-xs);color:var(--color-green);font-weight:600;}
+.chart-placeholder{background:var(--color-surface-offset);border-radius:var(--radius-md);padding:var(--space-4);margin-bottom:var(--space-4);}
+.chart-label{font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);}
+.chart-bars{display:flex;align-items:flex-end;gap:3px;height:60px;}
+.bar{flex:1;border-radius:2px 2px 0 0;background:var(--color-primary);opacity:0.3;}
+.bar.active{opacity:1;}.bar.accent{background:var(--color-accent);opacity:0.7;}
+.client-list{display:flex;flex-direction:column;gap:var(--space-2);}
+.client-row{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-sm);}
+.client-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.client-name{font-size:var(--text-xs);font-weight:500;flex:1;}
+.client-sat{font-size:var(--text-xs);color:var(--color-text-muted);}
+.sat-bar-wrap{width:48px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;}
+.sat-bar-fill{height:100%;border-radius:2px;}
+.preview-info{display:flex;flex-direction:column;gap:var(--space-6);}
+.info-step{display:flex;gap:var(--space-4);}
+.step-num{width:36px;height:36px;border-radius:var(--radius-md);background:var(--color-primary-dim);border:1px solid rgba(232,160,48,0.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:var(--text-base);color:var(--color-primary);flex-shrink:0;font-weight:600;}
+.step-content h3{font-size:var(--text-base);font-weight:600;margin-bottom:var(--space-1);}
+.step-content p{font-size:var(--text-sm);color:var(--color-text-muted);line-height:1.6;}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-4);margin-top:var(--space-10);}
+.feature-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-6);transition:border-color var(--transition),transform var(--transition),box-shadow var(--transition);}
+.feature-card:hover{border-color:rgba(232,160,48,0.2);transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.feature-icon{width:40px;height:40px;border-radius:var(--radius-md);background:var(--color-primary-dim);display:flex;align-items:center;justify-content:center;margin-bottom:var(--space-4);font-size:20px;}
+.feature-card h3{font-size:var(--text-base);font-weight:700;margin-bottom:var(--space-2);}
+.feature-card p{font-size:var(--text-sm);color:var(--color-text-muted);line-height:1.6;}
+.tech-section{background:var(--color-surface);}
+.tech-row{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-8);}
+.tech-pill{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-full);font-size:var(--text-sm);font-weight:500;color:var(--color-text-muted);}
+.tech-pill strong{color:var(--color-text);}
+.timeline{display:flex;flex-direction:column;gap:0;margin-top:var(--space-10);position:relative;}
+.timeline::before{content:"";position:absolute;left:19px;top:20px;bottom:20px;width:1px;background:var(--color-divider);}
+.tl-item{display:flex;gap:var(--space-5);padding-bottom:var(--space-6);}
+.tl-dot{width:40px;height:40px;border-radius:50%;background:var(--color-surface-offset);border:1px solid var(--color-border);display:flex;align-items:center;justify-content:center;font-size:var(--text-xs);font-weight:700;flex-shrink:0;position:relative;z-index:1;color:var(--color-text-muted);}
+.tl-dot.done{background:var(--color-primary-dim);border-color:rgba(232,160,48,0.3);color:var(--color-primary);}
+.tl-content{padding-top:var(--space-2);}
+.tl-content strong{font-size:var(--text-base);font-weight:700;display:block;margin-bottom:var(--space-1);}
+.tl-content span{font-size:var(--text-sm);color:var(--color-text-muted);}
+.tl-tag{display:inline-block;padding:1px var(--space-2);background:var(--color-green-dim);border:1px solid rgba(90,158,69,0.2);border-radius:var(--radius-full);font-size:var(--text-xs);color:var(--color-green);font-weight:600;margin-left:var(--space-2);}
+.cta-section{text-align:center;padding:clamp(var(--space-16),8vw,var(--space-24)) var(--space-6);position:relative;overflow:hidden;}
+.cta-glow{position:absolute;bottom:-100px;left:50%;transform:translateX(-50%);width:500px;height:300px;background:radial-gradient(ellipse,rgba(232,160,48,0.06) 0%,transparent 70%);pointer-events:none;}
+.cta-section h2{font-family:var(--font-display);font-size:var(--text-2xl);letter-spacing:-0.02em;margin-bottom:var(--space-4);}
+.cta-section p{font-size:var(--text-lg);color:var(--color-text-muted);max-width:46ch;margin:0 auto var(--space-10);}
+.cta-code{display:inline-block;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-8);font-family:monospace;font-size:var(--text-sm);color:var(--color-primary);text-align:left;margin-bottom:var(--space-8);position:relative;}
+.cta-code .comment{color:var(--color-text-faint);}
+.cta-code .cmd{color:var(--color-text);}
+.copy-btn{position:absolute;top:var(--space-3);right:var(--space-3);padding:var(--space-1) var(--space-3);background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-xs);color:var(--color-text-muted);cursor:pointer;}
+.copy-btn:hover{color:var(--color-text);}
+footer{border-top:1px solid var(--color-divider);padding:var(--space-8) var(--space-6);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);}
+.footer-left{font-size:var(--text-sm);color:var(--color-text-faint);}
+.footer-left a{color:var(--color-text-muted);text-decoration:none;}
+.footer-left a:hover{color:var(--color-primary);}
+.footer-right{display:flex;align-items:center;gap:var(--space-4);}
+.footer-link{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm);color:var(--color-text-muted);text-decoration:none;}
+.footer-link:hover{color:var(--color-text);}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.6s ease,transform 0.6s ease;}
+.reveal.visible{opacity:1;transform:none;}
+@media(max-width:768px){.preview-grid{grid-template-columns:1fr;}.kpi-row{grid-template-columns:repeat(2,1fr);}.hero-stats{gap:var(--space-6);}nav .nav-links{display:none;}.hero{padding-top:var(--space-20);}.features-grid{grid-template-columns:1fr;}.timeline::before{left:15px;}.tl-dot{width:32px;height:32px;}footer{flex-direction:column;align-items:flex-start;}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<nav aria-label="Main navigation">
+  <a href="#" class="nav-logo" aria-label="AdEmpire Home">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#E8A030" fill-opacity="0.15"/><path d="M8 22L13 10L16 17L19 13L24 22" stroke="#E8A030" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="10" r="2.5" fill="#E8A030"/><path d="M8 25H24" stroke="#E8A030" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/></svg>
+    <span class="nav-logo-text">AdEmpire</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Systems</a>
+    <a href="#gameplay">Gameplay</a>
+    <a href="#versions">Versions</a>
+    <a href="#stack">Stack</a>
+  </div>
+  <a href="https://github.com/Gzeu/AdEmpire" target="_blank" rel="noopener noreferrer" class="nav-cta">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    View on GitHub
+  </a>
+</nav>
+
+<section class="hero" aria-label="Hero">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-grid" aria-hidden="true"></div>
+  <div class="hero-badge"><span class="badge-dot" aria-hidden="true"></span>v0.7 — Feature Complete</div>
+  <h1>Run the<br><em>Ad Empire.</em></h1>
+  <p class="hero-subtitle">A C++ business simulation where you build a digital marketing agency from scratch. Launch campaigns, outmaneuver AI rivals, and conquer the market.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/Gzeu/AdEmpire" target="_blank" rel="noopener noreferrer" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Clone &amp; Build
+    </a>
+    <a href="#features" class="btn-ghost">Explore Features</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-item"><span class="stat-num">55+</span><span class="stat-label">Source Files</span></div>
+    <div class="stat-item"><span class="stat-num">30</span><span class="stat-label">Clients</span></div>
+    <div class="stat-item"><span class="stat-num">31</span><span class="stat-label">JSON Events</span></div>
+    <div class="stat-item"><span class="stat-num">15</span><span class="stat-label">Achievements</span></div>
+  </div>
+</section>
+
+<section class="section preview-section" id="gameplay" aria-labelledby="gameplay-heading">
+  <div class="section-inner">
+    <div class="section-label">Gameplay</div>
+    <h2 class="section-title" id="gameplay-heading">Your agency, your rules.</h2>
+    <p class="section-desc">Every month the simulation runs — campaigns resolve, clients churn or renew, AI rivals steal market share. Decisions have consequences.</p>
+    <div class="preview-grid reveal">
+      <div class="preview-ui" role="img" aria-label="AdEmpire dashboard mockup">
+        <div class="ui-titlebar">
+          <span class="ui-dot red"></span><span class="ui-dot yellow"></span><span class="ui-dot green"></span>
+          <span class="ui-title">AdEmpire — Dashboard — Month 8</span>
+        </div>
+        <div class="ui-body">
+          <div class="kpi-row">
+            <div class="kpi-card"><span class="kpi-val gold">$84,200</span><div class="kpi-lbl">Budget</div><div class="kpi-delta">↑ +$12K this month</div></div>
+            <div class="kpi-card"><span class="kpi-val green">22%</span><div class="kpi-lbl">Market Share</div><div class="kpi-delta">↑ +3.2%</div></div>
+            <div class="kpi-card"><span class="kpi-val">7</span><div class="kpi-lbl">Active Clients</div><div class="kpi-delta">1 at risk</div></div>
+          </div>
+          <div class="chart-placeholder">
+            <div class="chart-label">Revenue — last 8 months</div>
+            <div class="chart-bars" aria-hidden="true">
+              <div class="bar" style="height:25%"></div><div class="bar" style="height:35%"></div>
+              <div class="bar" style="height:30%"></div><div class="bar" style="height:50%"></div>
+              <div class="bar accent" style="height:40%"></div><div class="bar" style="height:65%"></div>
+              <div class="bar" style="height:75%"></div><div class="bar active" style="height:100%"></div>
+            </div>
+          </div>
+          <div class="client-list">
+            <div class="client-row"><div class="client-dot" style="background:#5a9e45"></div><span class="client-name">NovaTech Ltd.</span><div class="sat-bar-wrap"><div class="sat-bar-fill" style="width:87%;background:#5a9e45;"></div></div><span class="client-sat">87%</span></div>
+            <div class="client-row"><div class="client-dot" style="background:#e8a030"></div><span class="client-name">Urban Threads</span><div class="sat-bar-wrap"><div class="sat-bar-fill" style="width:62%;background:#e8a030;"></div></div><span class="client-sat">62%</span></div>
+            <div class="client-row"><div class="client-dot" style="background:#c94b2a"></div><span class="client-name">BloomBox Foods</span><div class="sat-bar-wrap"><div class="sat-bar-fill" style="width:38%;background:#c94b2a;"></div></div><span class="client-sat">38% ⚠</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="preview-info">
+        <div class="info-step"><div class="step-num">1</div><div class="step-content"><h3>Pitch clients, negotiate contracts</h3><p>Live fit score evaluates your agency specialization match. Use 6 negotiation actions to close deals.</p></div></div>
+        <div class="info-step"><div class="step-num">2</div><div class="step-content"><h3>Launch campaigns across 6 channels</h3><p>Social, SEO, Email, Influencer, PR, Paid Search. Budget allocation + staff bonuses + industry multipliers.</p></div></div>
+        <div class="info-step"><div class="step-num">3</div><div class="step-content"><h3>React to 31 market events</h3><p>Algorithm changes, viral trends, recession hits, PR crises — all moddable via JSON, no recompile needed.</p></div></div>
+        <div class="info-step"><div class="step-num">4</div><div class="step-content"><h3>Hit 35% market share to win</h3><p>Three AI rivals adapt and poach your clients. Out-specialize or out-spend them before they get to you.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features" aria-labelledby="features-heading">
+  <div class="section-inner">
+    <div class="section-label">Systems</div>
+    <h2 class="section-title" id="features-heading">Everything is simulated.</h2>
+    <p class="section-desc">Every number on screen is calculated. No static values — every campaign, event, and rivalry runs through real math.</p>
+    <div class="features-grid reveal">
+      <div class="feature-card"><div class="feature-icon">📊</div><h3>Campaign Engine</h3><p>Reach × CTR × Conversions × AOV → Agency fee. Channel modifiers stack with seasonal events, industry bonuses, and staff skill.</p></div>
+      <div class="feature-card"><div class="feature-icon">🤖</div><h3>AI Competitors</h3><p>MediaBlaze, PeakBrands, NicheNation — 3 rival agencies that grow, adapt, and escalate aggression as you gain share.</p></div>
+      <div class="feature-card"><div class="feature-icon">🎯</div><h3>Negotiation System</h3><p>Live fit score with channel fit, industry experience, reputation, and capacity. Six actions, mood bar, probability resolution.</p></div>
+      <div class="feature-card"><div class="feature-icon">🏆</div><h3>Quarterly Goals</h3><p>Fresh objectives every 3 months. Hit them for rewards and reputation. Miss them and lose the bonus permanently.</p></div>
+      <div class="feature-card"><div class="feature-icon">⚡</div><h3>8 Specializations</h3><p>Fashion → Influencer ×1.6. Tech → SEO ×1.5. Finance → Paid ×1.5. Unlock through industry experience.</p></div>
+      <div class="feature-card"><div class="feature-icon">📈</div><h3>Stats Tracker</h3><p>Revenue per channel, win rates by industry, 24-month retention trends, and monthly campaign breakdowns.</p></div>
+      <div class="feature-card"><div class="feature-icon">🧑‍💼</div><h3>Staff Leveling</h3><p>5 levels from Junior to Principal. Skill grows 0.8%/month. Level-ups raise capability and salary both.</p></div>
+      <div class="feature-card"><div class="feature-icon">💾</div><h3>3 Save Slots + Leaderboard</h3><p>Multiple playthroughs, full JSON save/load, local top-10 leaderboard sorted by revenue. Your best runs persist.</p></div>
+      <div class="feature-card"><div class="feature-icon">🎲</div><h3>31 Moddable Events</h3><p>Edit <code style="font-size:0.85em;color:var(--color-primary)">assets/data/events.json</code> — custom events load at startup with zero recompilation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section tech-section" id="stack" aria-labelledby="stack-heading">
+  <div class="section-inner">
+    <div class="section-label">Tech Stack</div>
+    <h2 class="section-title" id="stack-heading">Pure C++. Zero engine overhead.</h2>
+    <p class="section-desc">ImGui runs the entire UI in immediate mode. GLFW handles windowing. Everything else is custom simulation logic.</p>
+    <div class="tech-row reveal">
+      <div class="tech-pill"><strong>C++ 17</strong> · Core language</div>
+      <div class="tech-pill"><strong>Dear ImGui</strong> · All UI (git submodule)</div>
+      <div class="tech-pill"><strong>GLFW 3</strong> · Windowing &amp; input</div>
+      <div class="tech-pill"><strong>OpenGL 3.3</strong> · Rendering backend</div>
+      <div class="tech-pill"><strong>nlohmann/json</strong> · Save + data (auto-downloaded)</div>
+      <div class="tech-pill"><strong>CMake 3.16+</strong> · Cross-platform build</div>
+      <div class="tech-pill"><strong>Ubuntu / Linux</strong> · Primary platform</div>
+      <div class="tech-pill"><strong>Windows</strong> · via vcpkg</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="versions" aria-labelledby="versions-heading">
+  <div class="section-inner">
+    <div class="section-label">Development</div>
+    <h2 class="section-title" id="versions-heading">Built in a single day.</h2>
+    <p class="section-desc">From zero to a 55-file feature-complete C++ game in one session. 20+ commits on main.</p>
+    <div class="timeline reveal">
+      <div class="tl-item"><div class="tl-dot done">v0.1</div><div class="tl-content"><strong>Core Engine <span class="tl-tag">✓ done</span></strong><span>Campaign, Client, Staff, AI, Events, Dashboard, Save system</span></div></div>
+      <div class="tl-item"><div class="tl-dot done">v0.2</div><div class="tl-content"><strong>Progression Layer <span class="tl-tag">✓ done</span></strong><span>Negotiation, FitScore, Quarterly Goals, Specializations, Capacity tracking</span></div></div>
+      <div class="tl-item"><div class="tl-dot done">v0.3</div><div class="tl-content"><strong>Polish Pass <span class="tl-tag">✓ done</span></strong><span>ToastSystem, ReportPanel, Difficulty selector, AI improvements, economy rebalance</span></div></div>
+      <div class="tl-item"><div class="tl-dot done">v0.5</div><div class="tl-content"><strong>Depth Systems <span class="tl-tag">✓ done</span></strong><span>Staff leveling (5 levels), 15 campaign templates, 15 achievements, seasonal bonuses, 3 save slots</span></div></div>
+      <div class="tl-item"><div class="tl-dot done">v0.7</div><div class="tl-content"><strong>Feature Complete <span class="tl-tag">✓ done</span></strong><span>StatsTracker, DifficultySystem, Leaderboard, 31 JSON moddable events, full integration</span></div></div>
+      <div class="tl-item"><div class="tl-dot">→</div><div class="tl-content"><strong>Next: Compile it</strong><span>Clone the repo, fire up Ubuntu, and send the first screenshot.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section" aria-labelledby="cta-heading">
+  <div class="cta-glow" aria-hidden="true"></div>
+  <h2 id="cta-heading">Ready to build your empire?</h2>
+  <p>Clone the repo, run four commands, and you're in the game.</p>
+  <div class="cta-code">
+    <button class="copy-btn" onclick="copyCode()">Copy</button>
+    <div><span class="comment"># Clone with ImGui submodule</span></div>
+    <div><span class="cmd">git clone --recurse-submodules https://github.com/Gzeu/AdEmpire.git</span></div>
+    <div><span class="cmd">cd AdEmpire &amp;&amp; mkdir build &amp;&amp; cd build</span></div>
+    <div><span class="cmd">cmake .. -DCMAKE_BUILD_TYPE=Release &amp;&amp; make -j$(nproc)</span></div>
+    <div><span class="cmd">./AdEmpire</span></div>
+  </div>
+  <br>
+  <a href="https://github.com/Gzeu/AdEmpire" target="_blank" rel="noopener noreferrer" class="btn-primary" style="margin:0 auto;">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    Open on GitHub
+  </a>
+</section>
+
+<footer>
+  <div class="footer-left">© 2026 <a href="https://github.com/Gzeu" target="_blank" rel="noopener noreferrer">George Pricop</a> — MIT License</div>
+  <div class="footer-right">
+    <a href="https://github.com/Gzeu/AdEmpire" target="_blank" rel="noopener noreferrer" class="footer-link">Gzeu/AdEmpire</a>
+    <a href="https://github.com/Gzeu/AdEmpire/blob/main/README.md" target="_blank" rel="noopener noreferrer" class="footer-link">Docs</a>
+  </div>
+</footer>
+
+<script>
+const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target);}});},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+function copyCode(){const lines=['git clone --recurse-submodules https://github.com/Gzeu/AdEmpire.git','cd AdEmpire && mkdir build && cd build','cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)','./AdEmpire'];navigator.clipboard.writeText(lines.join('\n')).then(()=>{const btn=document.querySelector('.copy-btn');const orig=btn.textContent;btn.textContent='Copied!';setTimeout(()=>btn.textContent=orig,2000);}).catch(()=>{});}
+</script>
+</body>
+</html>
