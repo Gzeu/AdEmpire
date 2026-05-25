@@ -1,43 +1,44 @@
-// SaveSystem.cpp — full save/load using nlohmann/json (header-only, included via lib/json.hpp)
 #include "SaveSystem.h"
-#include "../../lib/json.hpp"
 #include <fstream>
 #include <iostream>
 
+// We use nlohmann/json — auto-downloaded by CMake to lib/json.hpp
+#include "json.hpp"
 using json = nlohmann::json;
 
-// ---- helpers ----
+// ───────────── Helpers ───────────────────────────────────────────────────
 static json clientToJson(const Client& c) {
-    return {
-        {"id",             c.id},
-        {"name",           c.name},
-        {"industry",       (int)c.industry},
-        {"budget",         c.budget},
-        {"satisfaction",   c.satisfaction},
-        {"contractMonths", c.contractMonths},
-        {"active",         c.active},
-        {"available",      c.available},
-        {"totalRevenue",   c.totalRevenue},
-        {"campaignIds",    c.campaignIds}
+    return json{
+        {"id",            c.id},
+        {"name",          c.name},
+        {"industry",      (int)c.industry},
+        {"budget",        c.budget},
+        {"satisfaction",  c.satisfaction},
+        {"contractMonths",c.contractMonths},
+        {"active",        c.active},
+        {"available",     c.available},
+        {"totalRevenue",  c.totalRevenue},
+        {"campaignIds",   c.campaignIds}
     };
 }
 static Client clientFromJson(const json& j) {
     Client c;
-    c.id             = j.at("id");
-    c.name           = j.at("name").get<std::string>();
-    c.industry       = (ClientIndustry)(int)j.at("industry");
-    c.budget         = j.at("budget");
-    c.satisfaction   = j.at("satisfaction");
-    c.contractMonths = j.at("contractMonths");
-    c.active         = j.at("active");
-    c.available      = j.at("available");
-    c.totalRevenue   = j.at("totalRevenue");
-    c.campaignIds    = j.at("campaignIds").get<std::vector<int>>();
+    c.id            = j.at("id");
+    c.name          = j.at("name").get<std::string>();
+    c.industry      = (ClientIndustry)(int)j.at("industry");
+    c.budget        = j.at("budget");
+    c.satisfaction  = j.at("satisfaction");
+    c.contractMonths= j.at("contractMonths");
+    c.active        = j.at("active");
+    c.available     = j.at("available");
+    c.totalRevenue  = j.value("totalRevenue", 0.f);
+    if (j.contains("campaignIds"))
+        c.campaignIds = j.at("campaignIds").get<std::vector<int>>();
     return c;
 }
 
 static json campaignToJson(const Campaign& c) {
-    return {
+    return json{
         {"id",             c.id},
         {"name",           c.name},
         {"clientId",       c.clientId},
@@ -62,21 +63,21 @@ static Campaign campaignFromJson(const json& j) {
     c.clientId       = j.at("clientId");
     c.channel        = (ChannelType)(int)j.at("channel");
     c.budget         = j.at("budget");
-    c.reach          = j.at("reach");
-    c.ctr            = j.at("ctr");
-    c.conversionRate = j.at("conversionRate");
-    c.revenue        = j.at("revenue");
-    c.agencyFee      = j.at("agencyFee");
+    c.reach          = j.value("reach", 0.f);
+    c.ctr            = j.value("ctr", 0.f);
+    c.conversionRate = j.value("conversionRate", 0.f);
+    c.revenue        = j.value("revenue", 0.f);
+    c.agencyFee      = j.value("agencyFee", 0.f);
     c.durationMonths = j.at("durationMonths");
     c.monthsLeft     = j.at("monthsLeft");
     c.active         = j.at("active");
     c.completed      = j.at("completed");
-    c.qualityScore   = j.at("qualityScore");
+    c.qualityScore   = j.value("qualityScore", 5.f);
     return c;
 }
 
 static json staffToJson(const StaffMember& s) {
-    return {
+    return json{
         {"id",          s.id},
         {"name",        s.name},
         {"role",        (int)s.role},
@@ -92,16 +93,11 @@ static StaffMember staffFromJson(const json& j) {
     s.role        = (StaffRole)(int)j.at("role");
     s.salary      = j.at("salary");
     s.skill       = j.at("skill");
-    s.monthsHired = j.at("monthsHired");
+    s.monthsHired = j.value("monthsHired", 0);
     return s;
 }
 
-// ---- public API ----
-bool SaveSystem::HasSave(const std::string& path) {
-    std::ifstream f(path);
-    return f.good();
-}
-
+// ───────────── Save ───────────────────────────────────────────────────
 bool SaveSystem::Save(const GameState& gs, const std::string& path) {
     try {
         json j;
@@ -110,83 +106,105 @@ bool SaveSystem::Save(const GameState& gs, const std::string& path) {
         j["month"]             = gs.month;
         j["year"]              = gs.year;
         j["playerMarketShare"] = gs.playerMarketShare;
-        j["monthlyRevenue"]    = gs.monthlyRevenue;
-        j["monthlyExpenses"]   = gs.monthlyExpenses;
         j["nextClientId"]      = gs.nextClientId;
         j["nextCampaignId"]    = gs.nextCampaignId;
         j["nextStaffId"]       = gs.nextStaffId;
-        // stats
+        // Stats
         j["stats"] = {
-            {"totalRevenue",        gs.stats.totalRevenue},
-            {"totalSpent",          gs.stats.totalSpent},
-            {"campaignsCompleted",  gs.stats.campaignsCompleted},
-            {"clientsAcquired",     gs.stats.clientsAcquired},
-            {"clientsLost",         gs.stats.clientsLost},
-            {"monthsPlayed",        gs.stats.monthsPlayed},
-            {"bestMonthRevenue",    gs.stats.bestMonthRevenue},
-            {"reputation",          gs.stats.reputation}
+            {"totalRevenue",       gs.stats.totalRevenue},
+            {"totalSpent",         gs.stats.totalSpent},
+            {"campaignsCompleted", gs.stats.campaignsCompleted},
+            {"clientsAcquired",    gs.stats.clientsAcquired},
+            {"clientsLost",        gs.stats.clientsLost},
+            {"monthsPlayed",       gs.stats.monthsPlayed},
+            {"bestMonthRevenue",   gs.stats.bestMonthRevenue},
+            {"reputation",         gs.stats.reputation}
         };
-        // collections
-        json clients = json::array();
-        for (auto& c : gs.clients)   clients.push_back(clientToJson(c));
-        j["clients"] = clients;
+        // Collections
+        json jClients = json::array();
+        for (auto& c : gs.clients)   jClients.push_back(clientToJson(c));
+        j["clients"] = jClients;
 
-        json campaigns = json::array();
-        for (auto& c : gs.campaigns) campaigns.push_back(campaignToJson(c));
-        j["campaigns"] = campaigns;
+        json jCamps = json::array();
+        for (auto& c : gs.campaigns) jCamps.push_back(campaignToJson(c));
+        j["campaigns"] = jCamps;
 
-        json staff = json::array();
-        for (auto& s : gs.staff)     staff.push_back(staffToJson(s));
-        j["staff"] = staff;
+        json jStaff = json::array();
+        for (auto& s : gs.staff)     jStaff.push_back(staffToJson(s));
+        j["staff"] = jStaff;
+
+        // Channel modifiers
+        json jMods = json::object();
+        for (auto& [k,v] : gs.channelModifiers)
+            jMods[std::to_string((int)k)] = v;
+        j["channelModifiers"] = jMods;
 
         std::ofstream f(path);
         if (!f.is_open()) return false;
         f << j.dump(2);
         return true;
-    } catch (const std::exception& e) {
+    } catch (std::exception& e) {
         std::cerr << "[SaveSystem] Save error: " << e.what() << std::endl;
         return false;
     }
 }
 
+// ───────────── Load ───────────────────────────────────────────────────
 bool SaveSystem::Load(GameState& gs, const std::string& path) {
     try {
         std::ifstream f(path);
         if (!f.is_open()) return false;
-        json j;
-        f >> j;
+        json j = json::parse(f);
 
         gs.agencyName        = j.at("agencyName").get<std::string>();
         gs.budget            = j.at("budget");
         gs.month             = j.at("month");
         gs.year              = j.at("year");
         gs.playerMarketShare = j.at("playerMarketShare");
-        gs.monthlyRevenue    = j.at("monthlyRevenue");
-        gs.monthlyExpenses   = j.at("monthlyExpenses");
-        gs.nextClientId      = j.at("nextClientId");
-        gs.nextCampaignId    = j.at("nextCampaignId");
-        gs.nextStaffId       = j.at("nextStaffId");
+        gs.nextClientId      = j.value("nextClientId",  100);
+        gs.nextCampaignId    = j.value("nextCampaignId", 100);
+        gs.nextStaffId       = j.value("nextStaffId",   100);
 
-        auto& st = gs.stats;
-        st.totalRevenue       = j["stats"]["totalRevenue"];
-        st.totalSpent         = j["stats"]["totalSpent"];
-        st.campaignsCompleted = j["stats"]["campaignsCompleted"];
-        st.clientsAcquired    = j["stats"]["clientsAcquired"];
-        st.clientsLost        = j["stats"]["clientsLost"];
-        st.monthsPlayed       = j["stats"]["monthsPlayed"];
-        st.bestMonthRevenue   = j["stats"]["bestMonthRevenue"];
-        st.reputation         = j["stats"]["reputation"];
+        if (j.contains("stats")) {
+            auto& s = j["stats"];
+            gs.stats.totalRevenue       = s.value("totalRevenue",       0.f);
+            gs.stats.totalSpent         = s.value("totalSpent",         0.f);
+            gs.stats.campaignsCompleted = s.value("campaignsCompleted", 0);
+            gs.stats.clientsAcquired    = s.value("clientsAcquired",    0);
+            gs.stats.clientsLost        = s.value("clientsLost",        0);
+            gs.stats.monthsPlayed       = s.value("monthsPlayed",       0);
+            gs.stats.bestMonthRevenue   = s.value("bestMonthRevenue",   0.f);
+            gs.stats.reputation         = s.value("reputation",         0.f);
+        }
 
         gs.clients.clear();
-        for (auto& jc : j["clients"])   gs.clients.push_back(clientFromJson(jc));
+        if (j.contains("clients"))
+            for (auto& jc : j["clients"])
+                gs.clients.push_back(clientFromJson(jc));
+
         gs.campaigns.clear();
-        for (auto& jc : j["campaigns"]) gs.campaigns.push_back(campaignFromJson(jc));
+        if (j.contains("campaigns"))
+            for (auto& jc : j["campaigns"])
+                gs.campaigns.push_back(campaignFromJson(jc));
+
         gs.staff.clear();
-        for (auto& js : j["staff"])     gs.staff.push_back(staffFromJson(js));
+        if (j.contains("staff"))
+            for (auto& js : j["staff"])
+                gs.staff.push_back(staffFromJson(js));
+
+        gs.channelModifiers.clear();
+        if (j.contains("channelModifiers"))
+            for (auto& [k, v] : j["channelModifiers"].items())
+                gs.channelModifiers[(ChannelType)std::stoi(k)] = v.get<float>();
 
         return true;
-    } catch (const std::exception& e) {
+    } catch (std::exception& e) {
         std::cerr << "[SaveSystem] Load error: " << e.what() << std::endl;
         return false;
     }
+}
+
+bool SaveSystem::HasSave(const std::string& path) {
+    std::ifstream f(path);
+    return f.good();
 }

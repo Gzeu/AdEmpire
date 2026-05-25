@@ -1,105 +1,85 @@
 #include "AchievementsSystem.h"
+#include "imgui.h"
+#include <algorithm>
 
-bool        AchievementsSystem::s_showPopup  = false;
-std::string AchievementsSystem::s_popupText  = "";
-float       AchievementsSystem::s_popupTimer = 0.f;
-
-static std::vector<Achievement> s_achievements;
+std::vector<Achievement>      AchievementsSystem::s_achievements;
+std::vector<AchievementPopup> AchievementsSystem::s_popups;
 
 void AchievementsSystem::Init() {
     s_achievements = {
-        // Revenue
-        {"first_dollar",   "First Dollar",      "Earn your first agency fee",              "💰", false, 0},
-        {"rev_10k",        "$10K Agency",        "Accumulate $10,000 total revenue",        "📈", false, 0},
-        {"rev_100k",       "$100K Club",         "Accumulate $100,000 total revenue",       "🏆", false, 0},
-        {"rev_1m",         "Millionaire Agency", "Accumulate $1,000,000 total revenue",     "🚀", false, 0},
-        {"best_month_5k",  "Hot Month",          "Earn $5,000 in a single month",           "🔥", false, 0},
-        {"best_month_20k", "On Fire",            "Earn $20,000 in a single month",          "⚡", false, 0},
-        // Clients
-        {"first_client",   "First Client",       "Sign your first client",                  "🤝", false, 0},
-        {"5_clients",      "Growing Agency",     "Have 5 active clients simultaneously",    "👥", false, 0},
-        {"10_clients",     "Powerhouse",         "Have 10 active clients simultaneously",   "🌟", false, 0},
-        {"pitch_master",   "Pitch Master",       "Successfully pitch 15 clients total",     "🎯", false, 0},
-        // Campaigns
-        {"5_camps",        "Campaign Veteran",   "Complete 5 campaigns",                    "📋", false, 0},
-        {"20_camps",       "Campaign Machine",   "Complete 20 campaigns",                   "⚙️",  false, 0},
-        {"all_channels",   "Omnichannel",        "Run a campaign on every channel type",    "📡", false, 0},
-        // Staff
-        {"first_hire",     "First Employee",     "Hire your first staff member",            "👔", false, 0},
-        {"full_team",      "Full Team",          "Have at least one of every staff role",   "🏢", false, 0},
-        // Market
-        {"share_10",       "Market Contender",   "Reach 10%% market share",                 "📊", false, 0},
-        {"share_25",       "Market Leader",      "Reach 25%% market share",                 "👑", false, 0},
-        {"share_35",       "Industry Titan",     "Reach 35%% market share — YOU WIN!",      "🏆", false, 0},
-        // Survival
-        {"survive_12",     "Year One",           "Survive 12 months without going bankrupt","🎂", false, 0},
-        {"survive_24",     "Veteran Agency",     "Survive 24 months",                       "🏅", false, 0},
-        // Rep
-        {"rep_50",         "Reputable",          "Reach 50 reputation",                     "⭐", false, 0},
-        {"rep_90",         "Legendary",          "Reach 90 reputation",                     "🌠", false, 0},
+        // ─ REVENUE (1-5)
+        {1,  "First Dollar",        "Earn your first $1 in agency fees",         "Revenue",    false, [](const GameState& g){ return g.stats.totalRevenue >= 1.f; }},
+        {2,  "Small Agency",        "Earn $10,000 total revenue",                "Revenue",    false, [](const GameState& g){ return g.stats.totalRevenue >= 10000.f; }},
+        {3,  "Six Figures",         "Earn $100,000 total revenue",               "Revenue",    false, [](const GameState& g){ return g.stats.totalRevenue >= 100000.f; }},
+        {4,  "Half Million Club",   "Earn $500,000 total revenue",               "Revenue",    false, [](const GameState& g){ return g.stats.totalRevenue >= 500000.f; }},
+        {5,  "Million Dollar Agency","Earn $1,000,000 total revenue",            "Revenue",    false, [](const GameState& g){ return g.stats.totalRevenue >= 1000000.f; }},
+        // ─ CLIENTS (6-9)
+        {6,  "First Client",        "Sign your first client",                    "Clients",    false, [](const GameState& g){ return g.stats.clientsAcquired >= 1; }},
+        {7,  "Agency of 5",         "Have 5 active clients simultaneously",      "Clients",    false, [](const GameState& g){
+            int n=0; for(auto& c:g.clients) if(c.active) n++; return n>=5; }},
+        {8,  "Portfolio Builder",   "Acquire 10 clients total",                  "Clients",    false, [](const GameState& g){ return g.stats.clientsAcquired >= 10; }},
+        {9,  "Client Whisperer",    "Acquire 20 clients total",                  "Clients",    false, [](const GameState& g){ return g.stats.clientsAcquired >= 20; }},
+        // ─ CAMPAIGNS (10-13)
+        {10, "First Campaign",      "Launch your first campaign",                "Campaigns",  false, [](const GameState& g){ return g.stats.campaignsCompleted >= 1; }},
+        {11, "Campaign Machine",    "Complete 10 campaigns",                     "Campaigns",  false, [](const GameState& g){ return g.stats.campaignsCompleted >= 10; }},
+        {12, "Multi-Channel",       "Run campaigns on 3+ different channels",    "Campaigns",  false, [](const GameState& g){
+            bool ch[6]={}; for(auto& c:g.campaigns) if(c.completed) ch[(int)c.channel]=true;
+            int n=0; for(int i=0;i<6;i++) if(ch[i]) n++; return n>=3; }},
+        {13, "Campaign Veteran",    "Complete 50 campaigns",                     "Campaigns",  false, [](const GameState& g){ return g.stats.campaignsCompleted >= 50; }},
+        // ─ STAFF (14-16)
+        {14, "First Hire",          "Hire your first staff member",              "Staff",      false, [](const GameState& g){ return g.staff.size() >= 1; }},
+        {15, "Dream Team",          "Have 5 staff members",                      "Staff",      false, [](const GameState& g){ return g.staff.size() >= 5; }},
+        {16, "Full Roster",         "Have one of each staff role",               "Staff",      false, [](const GameState& g){
+            bool r[6]={}; for(auto& s:g.staff) r[(int)s.role]=true;
+            for(int i=0;i<6;i++) if(!r[i]) return false; return true; }},
+        // ─ MARKET (17-19)
+        {17, "Market Entry",        "Reach 5% market share",                     "Market",     false, [](const GameState& g){ return g.playerMarketShare >= 5.f; }},
+        {18, "Market Challenger",   "Reach 15% market share",                    "Market",     false, [](const GameState& g){ return g.playerMarketShare >= 15.f; }},
+        {19, "Market Leader",       "Reach 35% market share — VICTORY!",         "Market",     false, [](const GameState& g){ return g.playerMarketShare >= 35.f; }},
+        // ─ SURVIVAL (20-21)
+        {20, "Year One",            "Survive 12 months",                         "Survival",   false, [](const GameState& g){ return g.stats.monthsPlayed >= 12; }},
+        {21, "Veteran Agency",      "Survive 36 months",                         "Survival",   false, [](const GameState& g){ return g.stats.monthsPlayed >= 36; }},
+        // ─ REPUTATION (22)
+        {22, "Legendary",           "Reach 90+ reputation",                      "Reputation", false, [](const GameState& g){ return g.stats.reputation >= 90.f; }},
     };
 }
 
-static void Unlock(const std::string& id, const GameState& gs) {
+void AchievementsSystem::CheckAll(const GameState& gs) {
     for (auto& a : s_achievements) {
-        if (a.id == id && !a.unlocked) {
-            a.unlocked      = true;
-            a.monthUnlocked = gs.stats.monthsPlayed;
-            AchievementsSystem::s_showPopup  = true;
-            AchievementsSystem::s_popupText  = a.icon + " Achievement: " + a.title;
-            AchievementsSystem::s_popupTimer = 3.0f;
+        if (!a.unlocked && a.condition(gs)) {
+            a.unlocked = true;
+            s_popups.push_back({a.title, 3.5f});
         }
     }
 }
 
-void AchievementsSystem::Check(const GameState& gs) {
-    int activeClients = 0;
-    for (auto& c : gs.clients) if (c.active) activeClients++;
-
-    // Revenue
-    if (gs.stats.totalRevenue > 0)         Unlock("first_dollar",   gs);
-    if (gs.stats.totalRevenue >= 10000)     Unlock("rev_10k",        gs);
-    if (gs.stats.totalRevenue >= 100000)    Unlock("rev_100k",       gs);
-    if (gs.stats.totalRevenue >= 1000000)   Unlock("rev_1m",         gs);
-    if (gs.stats.bestMonthRevenue >= 5000)  Unlock("best_month_5k",  gs);
-    if (gs.stats.bestMonthRevenue >= 20000) Unlock("best_month_20k", gs);
-    // Clients
-    if (gs.stats.clientsAcquired >= 1)      Unlock("first_client",   gs);
-    if (activeClients >= 5)                 Unlock("5_clients",      gs);
-    if (activeClients >= 10)                Unlock("10_clients",     gs);
-    if (gs.stats.clientsAcquired >= 15)     Unlock("pitch_master",   gs);
-    // Campaigns
-    if (gs.stats.campaignsCompleted >= 5)   Unlock("5_camps",        gs);
-    if (gs.stats.campaignsCompleted >= 20)  Unlock("20_camps",       gs);
-    // Staff
-    if (!gs.staff.empty())                  Unlock("first_hire",     gs);
-    // Check full team (one of each role)
-    bool roles[6] = {};
-    for (auto& s : gs.staff) roles[(int)s.role] = true;
-    bool fullTeam = true;
-    for (int i = 0; i < 6; i++) if (!roles[i]) { fullTeam = false; break; }
-    if (fullTeam)                           Unlock("full_team",      gs);
-    // Market share
-    if (gs.playerMarketShare >= 10.f)       Unlock("share_10",       gs);
-    if (gs.playerMarketShare >= 25.f)       Unlock("share_25",       gs);
-    if (gs.playerMarketShare >= 35.f)       Unlock("share_35",       gs);
-    // Survival
-    if (gs.stats.monthsPlayed >= 12)        Unlock("survive_12",     gs);
-    if (gs.stats.monthsPlayed >= 24)        Unlock("survive_24",     gs);
-    // Reputation
-    if (gs.stats.reputation >= 50.f)        Unlock("rep_50",         gs);
-    if (gs.stats.reputation >= 90.f)        Unlock("rep_90",         gs);
-    // All channels used
-    bool usedChannels[6] = {};
-    for (auto& c : gs.campaigns) usedChannels[(int)c.channel] = true;
-    bool allCh = true;
-    for (int i = 0; i < 6; i++) if (!usedChannels[i]) { allCh = false; break; }
-    if (allCh)                              Unlock("all_channels",   gs);
+void AchievementsSystem::RenderPopups() {
+    float dt = ImGui::GetIO().DeltaTime;
+    ImVec2 vp = ImGui::GetMainViewport()->Size;
+    float y = vp.y - 80.f;
+    for (auto& p : s_popups) {
+        p.timer -= dt;
+        float alpha = std::min(p.timer / 0.5f, 1.f);
+        ImGui::SetNextWindowPos(ImVec2(vp.x - 320.f, y), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(300, 54));
+        ImGui::SetNextWindowBgAlpha(alpha * 0.92f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.5f, 0.15f, 1.f));
+        char wid[32]; snprintf(wid, 32, "##popup%d", (int)(y));
+        ImGui::Begin(wid, nullptr,
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus);
+        ImGui::Text("\xF0\x9F\x8F\x86 Achievement Unlocked!");
+        ImGui::TextColored(ImVec4(1.f,1.f,0.4f,alpha), "%s", p.title.c_str());
+        ImGui::End();
+        ImGui::PopStyleColor();
+        y -= 60.f;
+    }
+    s_popups.erase(
+        std::remove_if(s_popups.begin(), s_popups.end(),
+            [](const AchievementPopup& p){ return p.timer <= 0.f; }),
+        s_popups.end());
 }
 
-const std::vector<Achievement>& AchievementsSystem::GetAll() { return s_achievements; }
-int AchievementsSystem::GetUnlockedCount() {
-    int n = 0;
-    for (auto& a : s_achievements) if (a.unlocked) n++;
-    return n;
+void AchievementsSystem::Render(GameState& gs) {
+    if (!gs.showSettings) return; // reuse flag — handled in main
 }

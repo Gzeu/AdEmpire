@@ -9,58 +9,47 @@ void AchievementsPanel::Render(GameState& gs) {
     ImGui::Begin("Achievements", &gs.showAchievements,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    int total    = (int)AchievementsSystem::GetAll().size();
-    int unlocked = AchievementsSystem::GetUnlockedCount();
-    ImGui::Text("Unlocked: %d / %d", unlocked, total);
-    ImGui::ProgressBar((float)unlocked / (float)total, ImVec2(-1, 12));
+    int total   = (int)AchievementsSystem::s_achievements.size();
+    int unlocked = 0;
+    for (auto& a : AchievementsSystem::s_achievements) if (a.unlocked) unlocked++;
+
+    char progLabel[32];
+    snprintf(progLabel, 32, "%d / %d", unlocked, total);
+    ImGui::Text("Progress:"); ImGui::SameLine();
+    ImGui::ProgressBar((float)unlocked / total, ImVec2(300, 18), progLabel);
     ImGui::Separator();
 
-    if (ImGui::BeginTable("##ach", 4,
-        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)) {
-        ImGui::TableSetupColumn("Icon",  ImGuiTableColumnFlags_WidthFixed, 40);
-        ImGui::TableSetupColumn("Title", ImGuiTableColumnFlags_WidthFixed, 160);
-        ImGui::TableSetupColumn("Description");
-        ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 80);
-        ImGui::TableHeadersRow();
-
-        for (auto& a : AchievementsSystem::GetAll()) {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("%s", a.icon.c_str());
-            ImGui::TableSetColumnIndex(1);
-            if (a.unlocked)
-                ImGui::TextColored(ImVec4(0.3f,1.f,0.5f,1.f), "%s", a.title.c_str());
-            else
-                ImGui::TextDisabled("%s", a.title.c_str());
-            ImGui::TableSetColumnIndex(2);
-            ImGui::TextWrapped("%s", a.description.c_str());
-            ImGui::TableSetColumnIndex(3);
-            if (a.unlocked)
-                ImGui::TextColored(ImVec4(0.3f,1.f,0.4f,1.f), "✓ Mo %d", a.monthUnlocked);
-            else
-                ImGui::TextDisabled("Locked");
-        }
-        ImGui::EndTable();
+    static const char* categories[] = {
+        "All","Revenue","Clients","Campaigns","Staff","Market","Survival","Reputation"
+    };
+    static int cat = 0;
+    ImGui::Text("Filter:"); ImGui::SameLine();
+    for (int i = 0; i < 8; i++) {
+        if (i > 0) ImGui::SameLine();
+        bool sel = (cat == i);
+        if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,1.f,1.f));
+        if (ImGui::Button(categories[i])) cat = i;
+        if (sel) ImGui::PopStyleColor();
     }
-    ImGui::End();
-}
+    ImGui::Separator();
 
-void AchievementsPanel::RenderPopupOverlay() {
-    if (!AchievementsSystem::s_showPopup) return;
-    AchievementsSystem::s_popupTimer -= ImGui::GetIO().DeltaTime;
-    if (AchievementsSystem::s_popupTimer <= 0.f) {
-        AchievementsSystem::s_showPopup = false;
-        return;
+    ImGui::BeginChild("##achlist", ImVec2(-1,-1), false);
+    for (auto& a : AchievementsSystem::s_achievements) {
+        bool show = (cat == 0 || a.category == categories[cat]);
+        if (!show) continue;
+        ImGui::PushID(a.id);
+        ImVec4 col = a.unlocked
+            ? ImVec4(0.3f, 1.f, 0.4f, 1.f)
+            : ImVec4(0.5f, 0.5f, 0.5f, 0.6f);
+        ImGui::TextColored(col, a.unlocked ? "[X]" : "[ ]");
+        ImGui::SameLine();
+        ImGui::TextColored(col, "%s", a.title.c_str());
+        ImGui::SameLine(320);
+        ImGui::TextColored(ImVec4(0.6f,0.6f,0.6f,1.f), "[%s]", a.category.c_str());
+        ImGui::TextDisabled("    %s", a.description.c_str());
+        ImGui::Separator();
+        ImGui::PopID();
     }
-    float alpha = std::min(AchievementsSystem::s_popupTimer, 1.0f);
-    ImGui::SetNextWindowBgAlpha(alpha * 0.9f);
-    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 320, 50));
-    ImGui::SetNextWindowSize(ImVec2(300, 60));
-    ImGui::Begin("##achpopup", nullptr,
-        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
-        ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus);
-    ImGui::SetWindowFontScale(1.1f);
-    ImGui::TextColored(ImVec4(1.f,0.85f,0.1f,alpha),
-        "%s", AchievementsSystem::s_popupText.c_str());
+    ImGui::EndChild();
     ImGui::End();
 }

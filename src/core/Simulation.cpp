@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
-#include <string>
+#include <cstdio>
 
 static const float BASE_REACH_PER_DOLLAR[] = { 50.f, 20.f, 80.f, 30.f, 15.f, 40.f };
 static const float BASE_CTR[]              = { 0.025f, 0.04f, 0.02f, 0.05f, 0.01f, 0.035f };
@@ -24,7 +24,7 @@ float Simulation::CalcReach(const Campaign& c, const GameState& gs) {
 
 float Simulation::CalcCTR(const Campaign& c, const GameState& gs) {
     int idx = (int)c.channel;
-    float base    = BASE_CTR[idx] * GetChannelMod(c.channel, gs);
+    float base = BASE_CTR[idx] * GetChannelMod(c.channel, gs);
     float qualMod = 0.5f + (c.qualityScore / 10.f) * 0.5f;
     return std::min(base * qualMod, 0.15f);
 }
@@ -35,10 +35,10 @@ float Simulation::CalcConversionRate(const Campaign& c, const GameState& gs) {
 }
 
 float Simulation::CalcRevenue(const Campaign& c, const GameState& gs) {
-    float r    = CalcReach(c, gs);
-    float ctr  = CalcCTR(c, gs);
+    float r = CalcReach(c, gs);
+    float ctr = CalcCTR(c, gs);
     float conv = CalcConversionRate(c, gs);
-    float aov  = 50.f;
+    float aov = 50.f;
     for (auto& cl : gs.clients)
         if (cl.id == c.clientId) { aov = cl.budget * 0.1f; break; }
     return r * ctr * conv * aov;
@@ -56,8 +56,11 @@ void Simulation::ProcessCampaign(Campaign& c, GameState& gs) {
         c.active    = false;
         c.completed = true;
         gs.stats.campaignsCompleted++;
-        Newsfeed::PushNews("Campaign '" + c.name + "' completed. Fee earned: $"
-            + std::to_string((int)c.agencyFee), 0.4f, 1.f, 0.6f);
+        // Newsfeed notification
+        char msg[128];
+        snprintf(msg, 128, "Campaign '%s' completed. Agency fee: $%.0f",
+            c.name.c_str(), c.agencyFee);
+        Newsfeed::PushNews(msg, 0.4f, 1.f, 0.6f);
     }
 }
 
@@ -70,21 +73,27 @@ void Simulation::UpdateClientSatisfaction(Client& cl, GameState& gs) {
             activeCamps++;
         }
     float expected = cl.budget * 0.5f;
-    float delta    = (totalRevenue - expected) / (expected + 1.f) * 20.f;
+    float delta = (totalRevenue - expected) / (expected + 1.f) * 20.f;
     cl.satisfaction = std::clamp(cl.satisfaction + delta, 0.f, 100.f);
     if (activeCamps == 0) cl.satisfaction -= 5.f;
     cl.satisfaction = std::max(cl.satisfaction, 0.f);
     cl.contractMonths--;
-    if (cl.contractMonths <= 0 && cl.satisfaction < 50.f) {
-        cl.active = false;
-        gs.stats.clientsLost++;
-        Newsfeed::PushNews("Client '" + cl.name + "' left due to low satisfaction!",
-            1.f, 0.3f, 0.3f);
-    } else if (cl.contractMonths <= 0 && cl.satisfaction >= 50.f) {
-        // Renew contract
-        cl.contractMonths = 6;
-        Newsfeed::PushNews("Client '" + cl.name + "' renewed contract for 6 months.",
-            0.3f, 0.8f, 1.f);
+
+    if (cl.contractMonths <= 0) {
+        if (cl.satisfaction < 50.f) {
+            cl.active = false;
+            gs.stats.clientsLost++;
+            char msg[128];
+            snprintf(msg, 128, "Client '%s' left due to low satisfaction (%.0f%%)!",
+                cl.name.c_str(), cl.satisfaction);
+            Newsfeed::PushNews(msg, 1.f, 0.3f, 0.3f);
+        } else {
+            cl.contractMonths = 6;
+            char msg[128];
+            snprintf(msg, 128, "Client '%s' renewed contract for 6 months!",
+                cl.name.c_str());
+            Newsfeed::PushNews(msg, 0.4f, 0.9f, 0.4f);
+        }
     }
 }
 
@@ -104,29 +113,35 @@ void Simulation::AdvanceMonth(GameState& gs) {
     if (gs.month > 12) { gs.month = 1; gs.year++; }
     gs.stats.monthsPlayed++;
 
-    // Tick active events
-    for (auto& ev : gs.activeEvents) { ev.monthsLeft--; if (ev.monthsLeft <= 0) ev.active = false; }
+    // Decay events
+    for (auto& ev : gs.activeEvents) {
+        ev.monthsLeft--;
+        if (ev.monthsLeft <= 0) ev.active = false;
+    }
     gs.activeEvents.erase(
         std::remove_if(gs.activeEvents.begin(), gs.activeEvents.end(),
             [](const NewsEvent& e){ return !e.active; }),
         gs.activeEvents.end());
 
-    // Rebuild channel mods
-    for (int i = 0; i < 6; i++) gs.channelModifiers[(ChannelType)i] = 1.0f;
+    // Rebuild channel modifiers
+    gs.channelModifiers.clear();
+    for (int i = 0; i < 6; i++)
+        gs.channelModifiers[(ChannelType)i] = 1.0f;
     for (auto& ev : gs.activeEvents) {
-        if (ev.active) {
-            gs.channelModifiers[ChannelType::Social]     *= ev.socialMod;
-            gs.channelModifiers[ChannelType::SEO]        *= ev.seoMod;
-            gs.channelModifiers[ChannelType::Email]      *= ev.emailMod;
-            gs.channelModifiers[ChannelType::Influencer] *= ev.influencerMod;
-            gs.channelModifiers[ChannelType::PR]         *= ev.prMod;
-            gs.channelModifiers[ChannelType::PaidSearch] *= ev.paidMod;
-            gs.budget += ev.budgetImpact;
-            if (ev.budgetImpact != 0)
-                Newsfeed::PushNews("[Event] " + ev.title + ": $"
-                    + std::to_string((int)ev.budgetImpact) + " budget impact",
-                    1.f, 0.8f, 0.2f);
+        gs.channelModifiers[ChannelType::Social]     *= ev.socialMod;
+        gs.channelModifiers[ChannelType::SEO]        *= ev.seoMod;
+        gs.channelModifiers[ChannelType::Email]      *= ev.emailMod;
+        gs.channelModifiers[ChannelType::Influencer] *= ev.influencerMod;
+        gs.channelModifiers[ChannelType::PR]         *= ev.prMod;
+        gs.channelModifiers[ChannelType::PaidSearch] *= ev.paidMod;
+        // Budget impact notification
+        if (ev.budgetImpact != 0.f && ev.monthsLeft == ev.durationMonths - 1) {
+            char msg[128];
+            snprintf(msg, 128, "[Event] %s: $%.0f budget impact",
+                ev.title.c_str(), ev.budgetImpact);
+            Newsfeed::PushNews(msg, 1.f, 0.8f, 0.2f);
         }
+        gs.budget += ev.budgetImpact;
     }
 
     // Process campaigns
@@ -138,20 +153,22 @@ void Simulation::AdvanceMonth(GameState& gs) {
             gs.stats.totalRevenue += c.agencyFee;
         }
 
-    // Salaries
+    // Staff salaries
     gs.monthlyExpenses = 0.f;
-    for (auto& s : gs.staff) { gs.monthlyExpenses += s.salary; s.monthsHired++; }
-    gs.stats.totalSpent += gs.monthlyExpenses;
-
+    for (auto& s : gs.staff) {
+        gs.monthlyExpenses += s.salary;
+        s.monthsHired++;
+    }
     gs.budget += gs.monthlyRevenue - gs.monthlyExpenses;
 
     // Update clients
     for (auto& cl : gs.clients)
         if (cl.active) UpdateClientSatisfaction(cl, gs);
 
-    // AI turn
+    // AI
     ProcessAICompetitors(gs);
 
+    // Best month
     if (gs.monthlyRevenue > gs.stats.bestMonthRevenue)
         gs.stats.bestMonthRevenue = gs.monthlyRevenue;
 
@@ -159,15 +176,17 @@ void Simulation::AdvanceMonth(GameState& gs) {
     float repDelta = (gs.monthlyRevenue > 0 ? 1.f : -1.f) * 0.3f;
     gs.stats.reputation = std::clamp(gs.stats.reputation + repDelta, 0.f, 100.f);
 
-    // Monthly summary news
-    Newsfeed::PushNews(
-        "[Month " + std::to_string(gs.month) + "/" + std::to_string(gs.year)
-        + "] Revenue: $" + std::to_string((int)gs.monthlyRevenue)
-        + "  Expenses: $" + std::to_string((int)gs.monthlyExpenses)
-        + "  Balance: $" + std::to_string((int)gs.budget),
-        0.7f, 0.9f, 1.f);
+    // Monthly summary newsfeed
+    char summary[128];
+    float profit = gs.monthlyRevenue - gs.monthlyExpenses;
+    snprintf(summary, 128, "Month %d/%d  Revenue: $%.0f  Expenses: $%.0f  Balance: %+.0f",
+        gs.month, gs.year, gs.monthlyRevenue, gs.monthlyExpenses, profit);
+    Newsfeed::PushNews(summary,
+        profit >= 0 ? 0.4f : 1.f,
+        profit >= 0 ? 1.f  : 0.4f,
+        0.4f);
 
     // Win / lose
-    if (gs.budget < -50000.f)         gs.gameOver = true;
+    if (gs.budget < -50000.f)          gs.gameOver = true;
     if (gs.playerMarketShare >= 35.f)  gs.victory  = true;
 }

@@ -23,8 +23,9 @@
 #include "ui/SettingsPanel.h"
 
 static GameState gs;
-static bool      gameStarted      = false;
-static bool      pendingNextMonth = false;
+static bool      gameStarted       = false;
+static bool      pendingNextMonth  = false;
+static bool      confirmDialogOpen = false;
 
 static void glfw_error_callback(int error, const char* desc) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, desc);
@@ -37,41 +38,59 @@ void RenderNavbar() {
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    auto closeAll = [&](){
-        gs.showCampaigns=false; gs.showClients=false; gs.showStaff=false;
-        gs.showMarketMap=false; gs.showNewsfeed=false; gs.showAchievements=false;
+    auto navBtn = [&](const char* label, bool& flag) {
+        if (ImGui::Button(label)) {
+            gs.showDashboard = gs.showCampaigns = gs.showClients =
+            gs.showStaff = gs.showMarketMap = gs.showNewsfeed =
+            gs.showSettings = gs.showAchievements = false;
+            flag = true;
+        }
+        ImGui::SameLine();
     };
 
-    if (ImGui::Button(" Dashboard  "))  { closeAll(); gs.showDashboard=true; }
-    ImGui::SameLine();
-    if (ImGui::Button(" Campaigns  "))  { closeAll(); gs.showCampaigns=true; }
-    ImGui::SameLine();
-    if (ImGui::Button("  Clients   "))  { closeAll(); gs.showClients=true; }
-    ImGui::SameLine();
-    if (ImGui::Button("   Staff    "))  { closeAll(); gs.showStaff=true; }
-    ImGui::SameLine();
-    if (ImGui::Button(" Market Map "))  { closeAll(); gs.showMarketMap=true; }
-    ImGui::SameLine();
-    if (ImGui::Button(" Newsfeed   "))  { closeAll(); gs.showNewsfeed=true; }
-    ImGui::SameLine();
-    if (ImGui::Button(" 🏆 Achieve "))  { closeAll(); gs.showAchievements=true; }
-    ImGui::SameLine();
-    if (ImGui::Button(" ⚙ Settings "))  gs.showSettings = !gs.showSettings;
-    ImGui::SameLine(0, 20);
+    navBtn(" Dashboard ",    gs.showDashboard);
+    navBtn(" Campaigns ",    gs.showCampaigns);
+    navBtn(" Clients ",      gs.showClients);
+    navBtn(" Staff ",        gs.showStaff);
+    navBtn(" Market Map ",   gs.showMarketMap);
+    navBtn(" Newsfeed ",     gs.showNewsfeed);
+    navBtn(" \xF0\x9F\x8F\x86 Achieve ", gs.showAchievements);
+    navBtn(" \xE2\x9A\x99 Settings ",    gs.showSettings);
 
     ImGui::TextColored(ImVec4(0.3f,1.f,0.5f,1.f),
-        "$%.0f | Mo %d/%d | %.1f%% mkt",
+        "   $%.0f | Mo %d/%d | Share %.1f%%",
         gs.budget, gs.month, gs.year, gs.playerMarketShare);
     ImGui::SameLine(0, 20);
 
-    if (ImGui::Button(" Next Month >> ")) pendingNextMonth = true;
+    if (ImGui::Button(" >> Next Month ")) {
+        if (SettingsPanel::s_data.confirmNextMonth)
+            confirmDialogOpen = true;
+        else
+            pendingNextMonth = true;
+    }
     ImGui::SameLine();
-    if (ImGui::Button(" Save ")) SaveSystem::Save(gs);
+    if (ImGui::Button(" Save "))
+        SaveSystem::Save(gs);
+    ImGui::End();
+}
+
+void RenderConfirmDialog() {
+    if (!confirmDialogOpen) return;
+    ImVec2 c = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f,0.5f));
+    ImGui::SetNextWindowSize(ImVec2(320,120));
+    ImGui::Begin("Confirm", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    ImGui::Text("Advance to next month?");
+    ImGui::Spacing();
+    if (ImGui::Button("Yes", ImVec2(120,32))) { pendingNextMonth = true; confirmDialogOpen = false; }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(120,32))) confirmDialogOpen = false;
     ImGui::End();
 }
 
 void RenderGame() {
     RenderNavbar();
+    RenderConfirmDialog();
     Dashboard::Render(gs);
     CampaignEditor::Render(gs);
     ClientManager::Render(gs);
@@ -80,56 +99,58 @@ void RenderGame() {
     StaffPanel::Render(gs);
     AchievementsPanel::Render(gs);
     SettingsPanel::Render(gs);
-    AchievementsPanel::RenderPopupOverlay();
+    AchievementsSystem::RenderPopups();
+
+    // FPS overlay
+    if (SettingsPanel::s_data.showFPS) {
+        ImGui::SetNextWindowPos(ImVec2(1180, 44), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.4f);
+        ImGui::Begin("##fps", nullptr,
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+        ImGui::TextColored(ImVec4(0.4f,1.f,0.4f,1.f),
+            "FPS %.0f", ImGui::GetIO().Framerate);
+        ImGui::End();
+    }
 
     // Win overlay
     if (gs.victory) {
         ImVec2 c = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f,0.5f));
-        ImGui::SetNextWindowSize(ImVec2(420, 220));
-        ImGui::Begin("VICTORY", nullptr, ImGuiWindowFlags_NoDecoration);
-        ImGui::SetWindowFontScale(2.f);
-        ImGui::TextColored(ImVec4(0.3f,1.f,0.4f,1.f), "  🏆 VICTORY!");
+        ImGui::SetNextWindowSize(ImVec2(420,220));
+        ImGui::Begin("VICTORY!", nullptr, ImGuiWindowFlags_NoDecoration);
+        ImGui::SetWindowFontScale(2.2f);
+        ImGui::TextColored(ImVec4(0.3f,1.f,0.4f,1.f), "  VICTORY!");
         ImGui::SetWindowFontScale(1.f);
         ImGui::Text("You reached 35%% market share!");
         ImGui::Text("Total Revenue: $%.0f", gs.stats.totalRevenue);
-        ImGui::Text("Campaigns Done: %d", gs.stats.campaignsCompleted);
-        ImGui::Text("Months Played:  %d", gs.stats.monthsPlayed);
+        ImGui::Text("Months played: %d", gs.stats.monthsPlayed);
+        ImGui::Spacing();
         if (ImGui::Button("Play Again", ImVec2(-1,40))) {
             gs = GameState();
-            AchievementsSystem::Init();
             gameStarted = false;
             MainMenu::s_showMenu = true;
         }
         ImGui::End();
     }
-    // Game over overlay
-    if (gs.gameOver) {
+
+    // Game Over overlay
+    if (gs.gameOver && !gs.victory) {
         ImVec2 c = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f,0.5f));
-        ImGui::SetNextWindowSize(ImVec2(400, 200));
+        ImGui::SetNextWindowSize(ImVec2(420,200));
         ImGui::Begin("GAME OVER", nullptr, ImGuiWindowFlags_NoDecoration);
-        ImGui::SetWindowFontScale(2.f);
-        ImGui::TextColored(ImVec4(1.f,0.3f,0.3f,1.f), "  GAME OVER");
+        ImGui::SetWindowFontScale(2.2f);
+        ImGui::TextColored(ImVec4(1.f,0.3f,0.3f,1.f), " GAME OVER");
         ImGui::SetWindowFontScale(1.f);
-        ImGui::Text("Agency went bankrupt (< -$50,000)");
-        ImGui::Text("Months survived: %d", gs.stats.monthsPlayed);
+        ImGui::Text("Budget went below -$50,000.");
+        ImGui::Text("Revenue earned: $%.0f", gs.stats.totalRevenue);
+        ImGui::Spacing();
         if (ImGui::Button("Try Again", ImVec2(-1,40))) {
             gs = GameState();
-            AchievementsSystem::Init();
             gameStarted = false;
             MainMenu::s_showMenu = true;
         }
-        ImGui::End();
-    }
-    // FPS counter
-    if (SettingsPanel::s_settings.showFPS) {
-        ImGui::SetNextWindowPos(ImVec2(1150, 700));
-        ImGui::SetNextWindowBgAlpha(0.4f);
-        ImGui::Begin("##fps", nullptr,
-            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
-            ImGuiWindowFlags_AlwaysAutoResize);
-        ImGui::Text("%.0f FPS", ImGui::GetIO().Framerate);
         ImGui::End();
     }
 }
@@ -137,13 +158,12 @@ void RenderGame() {
 int main() {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return -1;
-
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(1280, 720,
-        "AdEmpire — Marketing Tycoon", nullptr, nullptr);
+        "AdEmpire \u2014 Marketing Tycoon", nullptr, nullptr);
     if (!window) return -1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -156,7 +176,9 @@ int main() {
     ImGui_ImplGLFW_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
     Theme::ApplyDarkMarketing();
-    AchievementsSystem::Init();
+
+    // Auto-save logic
+    int monthsSinceAutoSave = 0;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -171,11 +193,14 @@ int main() {
                 EventSystem::TryTriggerEvent(gs);
                 AICompetitor::ProcessTurn(gs);
                 Simulation::AdvanceMonth(gs);
-                AchievementsSystem::Check(gs);
+                AchievementsSystem::CheckAll(gs);
                 // Auto-save
-                if (SettingsPanel::s_settings.autoSave &&
-                    gs.stats.monthsPlayed % SettingsPanel::s_settings.autoSaveInterval == 0)
-                    SaveSystem::Save(gs, SettingsPanel::s_settings.saveSlot);
+                monthsSinceAutoSave++;
+                if (SettingsPanel::s_data.autoSave &&
+                    monthsSinceAutoSave >= SettingsPanel::s_data.autoSaveMonths) {
+                    SaveSystem::Save(gs);
+                    monthsSinceAutoSave = 0;
+                }
                 pendingNextMonth = false;
             }
             RenderGame();
