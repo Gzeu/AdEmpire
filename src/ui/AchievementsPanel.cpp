@@ -30,9 +30,9 @@ void AchievementsPanel::Render(GameState& gs) {
             ImGui::PushStyleColor(ImGuiCol_ChildBg,
                 a.unlocked ? ImVec4(0.08f,0.18f,0.10f,0.9f)
                            : ImVec4(0.08f,0.08f,0.12f,0.9f));
-            ImGui::BeginChild(a.id.c_str(), ImVec2(-1, 64), true);
+            ImGui::BeginChild(std::to_string(a.id).c_str(), ImVec2(-1, 64), true);
             ImGui::TextColored(col, "%s  %s",
-                a.unlocked ? "\u2705" : "\ud83d\udd12", a.name.c_str());
+                a.unlocked ? "[X]" : "[ ]", a.title.c_str());
             ImGui::TextWrapped("%s", a.description.c_str());
             ImGui::EndChild();
             ImGui::PopStyleColor();

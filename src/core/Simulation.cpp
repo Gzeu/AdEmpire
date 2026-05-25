@@ -59,7 +59,7 @@ void Simulation::ProcessCampaign(Campaign& c, GameState& gs) {
     }
 }
 
-void Simulation::UpdateClientSatisfaction(Client& cl, const GameState& gs) {
+void Simulation::UpdateClientSatisfaction(Client& cl, GameState& gs) {
     float totalRevenue = 0.f;
     int activeCamps = 0;
     for (auto& c : gs.campaigns)

@@ -128,25 +128,28 @@ void NegotiationSystem::Resolve(GameState& gs) {
     auto& n = gs.negotiation;
     n.stage = NegotiationStage::Closed;
 
-    for (auto& cl : gs.clients)
-        if (cl.id == n.clientId) cl.inNegotiation = false;
+    Client* targetClient = nullptr;
+    for (auto& cl : gs.clients) {
+        if (cl.id == n.clientId) {
+            cl.inNegotiation = false;
+            targetClient = &cl;
+        }
+    }
 
-    float winChance = FitScoreSystem::WinChance(n.fitScore, gs.stats.reputation);
+    if (!targetClient) return;
+
+    float winChance = FitScoreSystem::GetWinProbability(*targetClient, gs);
     float moodMod   = (n.clientMood - 0.5f) * 0.4f;
     bool  won       = !n.lostDeal && ((float)(rand() % 100) / 100.f < winChance + moodMod);
 
     if (won) {
         n.wonDeal = true;
-        for (auto& cl : gs.clients)
-            if (cl.id == n.clientId) {
-                cl.active         = true;
-                cl.available      = false;
-                cl.budget         = n.offeredBudget;
-                cl.contractType   = n.offeredContract;
-                cl.contractMonths = ContractDurations[(int)n.offeredContract];
-                cl.satisfaction   = 70.f;
-                break;
-            }
+        targetClient->active         = true;
+        targetClient->available      = false;
+        targetClient->budget         = n.offeredBudget;
+        targetClient->contractType   = n.offeredContract;
+        targetClient->contractMonths = ContractDurations[(int)n.offeredContract];
+        targetClient->satisfaction   = 70.f;
         gs.stats.clientsAcquired++;
         gs.stats.negotiationsWon++;
         gs.playerMarketShare += 1.5f;

@@ -4,15 +4,6 @@
 #include <vector>
 #include <functional>
 
-struct Achievement {
-    int         id;
-    std::string title;
-    std::string description;
-    std::string category;  // Revenue, Clients, Campaigns, Staff, Market, Survival, Reputation
-    bool        unlocked;
-    std::function<bool(const GameState&)> condition;
-};
-
 struct AchievementPopup {
     std::string title;
     float       timer;  // seconds remaining

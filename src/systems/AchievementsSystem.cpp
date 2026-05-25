@@ -48,7 +48,7 @@ void AchievementsSystem::CheckAll(const GameState& gs) {
     for (auto& a : s_achievements) {
         if (!a.unlocked && a.condition(gs)) {
             a.unlocked = true;
-            s_popups.push_back({a.title, 3.5f});
+            s_popups.push_back(AchievementPopup{a.title, 3.5f});
         }
     }
 }

@@ -75,14 +75,14 @@ bool MainMenu::Render(GameState& gs) {
             ai.aggressiveness *= dcfg.aiAggressiveness;
         EventSystem::Init(gs);
         gs.clients = {
-            {1,"TastyBite Foods",   ClientIndustry::Food,    3000, 70, 6,  false, true, {}, 0},
-            {2,"UrbanThread Co",    ClientIndustry::Fashion, 4500, 70, 6,  false, true, {}, 0},
-            {3,"SparkTech Ltd",     ClientIndustry::Tech,    8000, 70, 12, false, true, {}, 0},
-            {4,"WealthWise",        ClientIndustry::Finance, 12000,70, 12, false, true, {}, 0},
-            {5,"VitalHealth Clinic",ClientIndustry::Health,  5000, 70, 6,  false, true, {}, 0},
-            {6,"EduPath Academy",   ClientIndustry::Education,3500,70, 6,  false, true, {}, 0},
-            {7,"GreenGrove Organic",ClientIndustry::Food,    2500, 70, 6,  false, true, {}, 0},
-            {8,"PixelForge Games",  ClientIndustry::Gaming,  9000, 70, 12, false, true, {}, 0},
+            {1,"TastyBite Foods",   ClientIndustry::Food,    3000, 70, 6,  false, true, false, ContractType::Monthly, {}, 0},
+            {2,"UrbanThread Co",    ClientIndustry::Fashion, 4500, 70, 6,  false, true, false, ContractType::Monthly, {}, 0},
+            {3,"SparkTech Ltd",     ClientIndustry::Tech,    8000, 70, 12, false, true, false, ContractType::Monthly, {}, 0},
+            {4,"WealthWise",        ClientIndustry::Finance, 12000,70, 12, false, true, false, ContractType::Monthly, {}, 0},
+            {5,"VitalHealth Clinic",ClientIndustry::Health,  5000, 70, 6,  false, true, false, ContractType::Monthly, {}, 0},
+            {6,"EduPath Academy",   ClientIndustry::Education,3500,70, 6,  false, true, false, ContractType::Monthly, {}, 0},
+            {7,"GreenGrove Organic",ClientIndustry::Food,    2500, 70, 6,  false, true, false, ContractType::Monthly, {}, 0},
+            {8,"PixelForge Games",  ClientIndustry::Gaming,  9000, 70, 12, false, true, false, ContractType::Monthly, {}, 0},
         };
         gs.nextClientId = 9;
         s_showMenu = false;

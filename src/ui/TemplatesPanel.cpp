@@ -1,31 +1,32 @@
 #include "TemplatesPanel.h"
 #include "../systems/CampaignEngine.h"
+#include "../systems/CampaignTemplates.h"
 #include "imgui.h"
 #include <cstdio>
 
 // 15 built-in templates
 static const CampaignTemplate TEMPLATES[] = {
     // Social
-    {"Viral Reel Blitz",     ChannelType::Social,     2000.f, 1.2f, ClientIndustry::Fashion,   "Short-form video burst, ideal for Fashion"},
-    {"Community Engagement", ChannelType::Social,     1500.f, 1.0f, ClientIndustry::Food,       "Build brand community over 3 months"},
-    {"Social Brand Lift",    ChannelType::Social,     3000.f, 1.1f, ClientIndustry::Retail,     "Broad awareness push across platforms"},
+    {"Viral Reel Blitz",     ChannelType::Social,     2000.f, 3, 1.2f, "Short-form video burst, ideal for Fashion", ClientIndustry::Fashion},
+    {"Community Engagement", ChannelType::Social,     1500.f, 3, 1.0f, "Build brand community over 3 months", ClientIndustry::Food},
+    {"Social Brand Lift",    ChannelType::Social,     3000.f, 6, 1.1f, "Broad awareness push across platforms", ClientIndustry::Retail},
     // SEO
-    {"SEO Foundation",       ChannelType::SEO,        1800.f, 0.8f, ClientIndustry::Tech,       "Technical SEO + on-page basics"},
-    {"Content Authority",    ChannelType::SEO,        2500.f, 1.2f, ClientIndustry::Finance,    "Long-form content for Finance niche"},
-    {"Local SEO Sprint",     ChannelType::SEO,        1200.f, 1.0f, ClientIndustry::Health,     "Google Business + local citations"},
+    {"SEO Foundation",       ChannelType::SEO,        1800.f, 6, 0.8f, "Technical SEO + on-page basics", ClientIndustry::Tech},
+    {"Content Authority",    ChannelType::SEO,        2500.f, 12, 1.2f, "Long-form content for Finance niche", ClientIndustry::Finance},
+    {"Local SEO Sprint",     ChannelType::SEO,        1200.f, 3, 1.0f, "Google Business + local citations", ClientIndustry::Health},
     // Email
-    {"Welcome Drip",         ChannelType::Email,      800.f,  1.0f, ClientIndustry::Education,  "5-email onboarding sequence"},
-    {"Re-engagement Blast",  ChannelType::Email,      1000.f, 1.1f, ClientIndustry::Retail,     "Win-back cold subscribers"},
+    {"Welcome Drip",         ChannelType::Email,      800.f,  3, 1.0f, "5-email onboarding sequence", ClientIndustry::Education},
+    {"Re-engagement Blast",  ChannelType::Email,      1000.f, 3, 1.1f, "Win-back cold subscribers", ClientIndustry::Retail},
     // Influencer
-    {"Micro-Influencer Pack",ChannelType::Influencer, 4000.f, 1.4f, ClientIndustry::Fashion,    "10 micro-influencers, high trust"},
-    {"Gaming Collab",        ChannelType::Influencer, 5000.f, 1.6f, ClientIndustry::Gaming,     "Streamer + YouTuber cross-promo"},
+    {"Micro-Influencer Pack",ChannelType::Influencer, 4000.f, 6, 1.4f, "10 micro-influencers, high trust", ClientIndustry::Fashion},
+    {"Gaming Collab",        ChannelType::Influencer, 5000.f, 6, 1.6f, "Streamer + YouTuber cross-promo", ClientIndustry::Gaming},
     // PR
-    {"Press Release Burst",  ChannelType::PR,         1500.f, 1.0f, ClientIndustry::Finance,    "5 press releases across trade media"},
-    {"Product Launch PR",    ChannelType::PR,         3500.f, 1.3f, ClientIndustry::Tech,       "Launch coverage + analyst briefings"},
+    {"Press Release Burst",  ChannelType::PR,         1500.f, 3, 1.0f, "5 press releases across trade media", ClientIndustry::Finance},
+    {"Product Launch PR",    ChannelType::PR,         3500.f, 6, 1.3f, "Launch coverage + analyst briefings", ClientIndustry::Tech},
     // Paid Search
-    {"Google Ads Starter",   ChannelType::PaidSearch, 2000.f, 1.0f, ClientIndustry::Retail,     "Search + Shopping campaign setup"},
-    {"Performance Max",      ChannelType::PaidSearch, 5000.f, 1.5f, ClientIndustry::Finance,    "Full PMax campaign across all Google inventory"},
-    {"Retargeting Engine",   ChannelType::PaidSearch, 1500.f, 1.2f, ClientIndustry::Health,     "Remarketing to warm audiences"},
+    {"Google Ads Starter",   ChannelType::PaidSearch, 2000.f, 3, 1.0f, "Search + Shopping campaign setup", ClientIndustry::Retail},
+    {"Performance Max",      ChannelType::PaidSearch, 5000.f, 12, 1.5f, "Full PMax campaign across all Google inventory", ClientIndustry::Finance},
+    {"Retargeting Engine",   ChannelType::PaidSearch, 1500.f, 3, 1.2f, "Remarketing to warm audiences", ClientIndustry::Health},
 };
 static const int TEMPLATE_COUNT = 15;
 
@@ -66,7 +67,7 @@ void TemplatesPanel::Render(GameState& gs) {
         ImGui::TextColored(ImVec4(0.3f,0.9f,1.f,1.f), "%s", t.name.c_str());
         ImGui::Separator();
         ImGui::Text("Channel:  %s", ChannelNames[(int)t.channel]);
-        ImGui::Text("Budget:   $%.0f", t.suggestedBudget);
+        ImGui::Text("Budget:   $%.0f", t.budgetSuggested);
         ImGui::Text("Quality+: %.1f", t.qualityBonus);
         ImGui::Text("Best for: %s", IndustryNames[(int)t.bestFor]);
         ImGui::TextWrapped("%s", t.description.c_str());
@@ -81,18 +82,18 @@ void TemplatesPanel::Render(GameState& gs) {
                 selectedClient = cl.id;
         }
         ImGui::Spacing();
-        bool canLaunch = selectedClient > 0 && gs.budget >= t.suggestedBudget;
+        bool canLaunch = selectedClient > 0 && gs.budget >= t.budgetSuggested;
         if (!canLaunch) ImGui::BeginDisabled();
         if (ImGui::Button("Launch Template Campaign", ImVec2(-1, 36))) {
             Campaign c = CampaignEngine::CreateCampaign(
                 t.name, selectedClient, t.channel,
-                t.suggestedBudget, 3, gs);
+                t.budgetSuggested, 3, gs);
             c.qualityScore = std::min(c.qualityScore + t.qualityBonus, 10.f);
-            gs.budget -= t.suggestedBudget;
+            gs.budget -= t.budgetSuggested;
             gs.campaigns.push_back(c);
         }
         if (!canLaunch) ImGui::EndDisabled();
-        if (gs.budget < t.suggestedBudget)
+        if (gs.budget < t.budgetSuggested)
             ImGui::TextColored(ImVec4(1,0.3f,0.3f,1), "Insufficient budget!");
     } else {
         ImGui::TextDisabled("Select a template from the list.");

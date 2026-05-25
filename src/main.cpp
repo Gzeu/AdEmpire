@@ -167,10 +167,10 @@ void RenderGame(float dt) {
 
     // ── v0.9: Agency Branding Panel ────────────────────────────────────────
     if (g_showBranding) {
-        if (g_branding.Render()) {
+        static int logoIdx = 0;
+        if (g_branding.Render(gs.agencyName, gs.agencyColor, logoIdx)) {
             // Confirmed: apply branding data to gs
-            gs.agencyColor  = g_branding.GetColor();
-            gs.agencyLogo   = g_branding.GetLogo();
+            gs.agencyLogo  = std::to_string(logoIdx);
             g_showBranding  = false;
             TOAST_SUCCESS("Branding updated!");
             SOUND(ButtonClick);
@@ -179,7 +179,14 @@ void RenderGame(float dt) {
 
     // ── v0.9: Pending event popup ──────────────────────────────────────────
     if (gs.pendingEventPopup) {
-        g_eventPopup.Show(gs.currentEvent);
+        MarketEventData evt;
+        evt.id = gs.currentEvent.id;
+        evt.title = gs.currentEvent.title;
+        evt.description = gs.currentEvent.description;
+        evt.effectText = gs.currentEvent.impact;
+        evt.category = "neutral"; // TODO: determine from event type
+        evt.durationMonths = gs.currentEvent.durationMonths;
+        g_eventPopup.Show(evt);
         gs.pendingEventPopup = false;
     }
     g_eventPopup.Render();                 // v0.9
@@ -191,19 +198,27 @@ void RenderGame(float dt) {
     // ── v0.9: Victory Screen (replaces basic overlay) ──────────────────────
     if (gs.victory) {
         if (!g_victory.IsOpen()) {
-            g_victory.Open(gs.stats);
+            VictoryStats vstats;
+            vstats.finalMarketShare = gs.playerMarketShare;
+            vstats.totalRevenue = gs.stats.totalRevenue;
+            vstats.monthsPlayed = gs.stats.monthsPlayed;
+            vstats.clientsServed = gs.stats.clientsAcquired;
+            vstats.achievementsEarned = 0; // TODO: count unlocked achievements
+            vstats.campaignsRun = gs.stats.campaignsCompleted;
+            vstats.bestMonthRevenue = gs.stats.bestMonthRevenue;
+            vstats.agencyName = gs.agencyName;
+            vstats.difficulty = "Normal";
+            g_victory.Open(vstats);
             SOUND(Victory);
         }
-        int vr = g_victory.Render(dt);     // v0.9: animated confetti
+        int vr = g_victory.Render();     // v0.9: animated confetti
         if (vr == 1) {
             // Play Again
-            g_victory.Close();
             gs           = GameState();
             gameStarted  = false;
             MainMenu::s_showMenu = true;
         } else if (vr == 2) {
             // Submit to Leaderboard
-            g_victory.Close();
             openOnly_v(gs.showLeaderboard);
         }
     }
@@ -246,7 +261,7 @@ int main() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    ImGui_ImplGLFW_InitForOpenGL(window, true);
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
     Theme::ApplyDarkMarketing();
 
@@ -263,18 +278,18 @@ int main() {
         lastTime   = now;
 
         ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGLFW_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         // ── v0.9: Splash gate ─────────────────────────────────────────────
         if (!g_splash.IsDone()) {
-            g_splash.Render(dt);
+            g_splash.Render();
         }
         // ── Branding gate on first NewGame ────────────────────────────────
         else if (g_showBranding && !gameStarted) {
-            if (g_branding.Render()) {
-                gs.agencyColor = g_branding.GetColor();
-                gs.agencyLogo  = g_branding.GetLogo();
+            static int logoIdx = 0;
+            if (g_branding.Render(gs.agencyName, gs.agencyColor, logoIdx)) {
+                gs.agencyLogo  = std::to_string(logoIdx);
                 g_showBranding = false;
                 // Now actually start the game
                 AchievementSystem::Init(gs);
@@ -295,7 +310,7 @@ int main() {
                 AICompetitor::ProcessTurn(gs);
                 StaffLeveling::ProcessMonth(gs);
                 AchievementSystem::Check(gs);
-                ReportPanel::GenerateReport(gs);
+                ReportPanel::GenerateMonthlyReport(gs);
                 Simulation::AdvanceMonth(gs);
 
                 gs.showReport = true;
@@ -336,7 +351,7 @@ int main() {
 
     AudioSystem::Get().Shutdown();  // v0.8: clean OpenAL
     ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGLFW_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();

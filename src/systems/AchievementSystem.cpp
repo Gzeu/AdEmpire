@@ -51,8 +51,16 @@ void AchievementSystem::Init(GameState& gs) {
     };
 
     gs.achievements.clear();
-    for (auto& d : s_defs)
-        gs.achievements.push_back({d.id, d.name, d.description, false});
+    for (auto& d : s_defs) {
+        Achievement a;
+        a.id = std::stoi(d.id);
+        a.title = d.name;
+        a.description = d.description;
+        a.category = "";
+        a.unlocked = false;
+        a.condition = d.condition;
+        gs.achievements.push_back(a);
+    }
 }
 
 void AchievementSystem::Check(GameState& gs) {
@@ -61,7 +69,7 @@ void AchievementSystem::Check(GameState& gs) {
         if (a.unlocked) continue;
         if (i < (int)s_defs.size() && s_defs[i].condition(gs)) {
             a.unlocked = true;
-            TOAST_SUCCESS("\ud83c� Achievement: " + a.name);
+            TOAST_SUCCESS("Achievement: " + a.title);
         }
     }
 }

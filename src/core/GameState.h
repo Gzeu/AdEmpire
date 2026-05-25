@@ -3,6 +3,8 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include "imgui.h"
+#include "../systems/Leaderboard.h"
 
 // ─── Channel Types ─────────────────────────────────────────────────────────
 enum class ChannelType {
@@ -39,12 +41,29 @@ struct Campaign {
 };
 
 // ─── Client ─────────────────────────────────────────────────────────────────
+enum class ContractType {
+    Monthly, Quarterly, Annual
+};
+
 enum class ClientIndustry {
     Food, Fashion, Tech, Finance, Health, Education, Retail, Gaming
 };
 static const char* IndustryNames[] = {
     "Food & Beverage", "Fashion", "Tech", "Finance",
     "Health", "Education", "Retail", "Gaming"
+};
+
+static const int ContractDurations[] = { 6, 9, 12, 18 };
+
+static const ChannelType IndustryBestChannel[] = {
+    ChannelType::Social,    // Food
+    ChannelType::Social,    // Fashion
+    ChannelType::SEO,       // Tech
+    ChannelType::PR,        // Finance
+    ChannelType::PR,        // Health
+    ChannelType::SEO,       // Education
+    ChannelType::PaidSearch,// Retail
+    ChannelType::Influencer // Gaming
 };
 
 struct Client {
@@ -56,6 +75,8 @@ struct Client {
     int            contractMonths;
     bool           active;
     bool           available;
+    bool           inNegotiation = false;
+    ContractType   contractType = ContractType::Monthly;
     std::vector<int> campaignIds;
     float          totalRevenue;
     int            unlockMonth = 1;
@@ -126,14 +147,6 @@ struct GameEvent {
     int   durationMonths = 1;
 };
 
-// ─── Achievement ─────────────────────────────────────────────────────────────
-struct Achievement {
-    std::string id;
-    std::string name;
-    std::string description;
-    bool        unlocked = false;
-};
-
 // ─── Agency Stats ────────────────────────────────────────────────────────────
 struct AgencyStats {
     float totalRevenue       = 0.f;
@@ -144,6 +157,8 @@ struct AgencyStats {
     int   monthsPlayed       = 0;
     float bestMonthRevenue   = 0.f;
     float reputation         = 0.f;
+    int   negotiationsWon    = 0;
+    int   negotiationsLost   = 0;
 };
 
 // ─── v0.2: FitScore ──────────────────────────────────────────────────────────
@@ -186,6 +201,15 @@ struct NegotiationState {
     float            offeredBudget = 0.f;
     bool             won           = false;
     bool             closed        = false;
+    bool             active        = false;
+    int              clientId      = -1;
+    std::string      lastMessage;
+    bool             lostDeal      = false;
+    bool             wonDeal       = false;
+    ContractType     offeredContract = ContractType::Monthly;
+    ChannelType      offeredChannel = ChannelType::Social;
+    FitScore         fitScore;
+    int              playerPressure = 0;
 };
 
 // ─── v0.2: Specialization ────────────────────────────────────────────────────
@@ -195,16 +219,6 @@ struct Specialization {
     int            clientsRequired;
     int            clientsServed;
     bool           unlocked;
-};
-
-// ─── v0.5: Campaign Template ─────────────────────────────────────────────────
-struct CampaignTemplate {
-    std::string    name;
-    ChannelType    channel;
-    float          suggestedBudget;
-    float          qualityBonus;
-    ClientIndustry bestFor;
-    std::string    description;
 };
 
 // ─── v0.5: Save Slot ─────────────────────────────────────────────────────────
@@ -217,6 +231,9 @@ struct SaveSlotMeta {
     int         year        = 0;
     int         clients     = 0;
 };
+
+// ─── Achievement (forward declaration for use in GameState) ───────────────────
+struct Achievement;
 
 // ─── Main GameState ──────────────────────────────────────────────────────────
 struct GameState {
@@ -243,6 +260,7 @@ struct GameState {
 
     // Stats
     AgencyStats stats;
+    std::vector<LeaderboardEntry> leaderboard;
 
     // v0.2 systems
     CapacityInfo     capacity;
@@ -280,6 +298,19 @@ struct GameState {
     bool showNegotiation     = false;
     bool showTemplates       = false;
     bool showSaveSlots       = false;
+    bool showLeaderboard     = false;
+    bool showSettings        = false;
+    bool showStats           = false;
     bool gameOver            = false;
     bool victory             = false;
+};
+
+// ─── Achievement ─────────────────────────────────────────────────────────────
+struct Achievement {
+    int         id;
+    std::string title;
+    std::string description;
+    std::string category;
+    bool        unlocked;
+    std::function<bool(const GameState&)> condition;
 };

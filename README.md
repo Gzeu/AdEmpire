@@ -365,6 +365,18 @@ Modifiers stack: market events × seasonal × industry bonus × specialization �
 | `std::hash<ChannelType>` | Template specialization in `GameState.h` |
 | Magic `rand() % 8` | Replaced with `STAFF_NAME_COUNT` constant |
 | Missing `<algorithm>` | Added to `ClientManager.cpp` |
+| ImGui function naming | Fixed GLFW → Glfw casing |
+| Missing GameState members | Added showLeaderboard, showSettings, showStats |
+| Method signature mismatches | Fixed VictoryScreen, AgencyBrandingPanel, SplashScreen |
+| Duplicate struct definitions | Removed duplicate CampaignTemplate, Achievement structs |
+| Circular dependencies | Fixed Achievement struct forward declaration |
+| Missing NegotiationState fields | Added lostDeal, wonDeal, offeredContract, fitScore, playerPressure, offeredChannel |
+| Missing AgencyStats fields | Added negotiationsWon, negotiationsLost |
+| Missing Client fields | Added inNegotiation, contractType |
+| Missing constants | Added ContractDurations, IndustryBestChannel |
+| Field name mismatches | Fixed Achievement name → title, suggestedBudget → budgetSuggested |
+| API mismatches | Simplified StatsPanel, fixed TemplatesPanel field order |
+| Header-only conflicts | Removed duplicate LeaderboardPanel.cpp, SettingsPanel.cpp |
 
 > ✅ Zero known compilation blockers on GCC 11+ / Clang 14+ / MSVC 19.38+ / Ubuntu 22.04+
 

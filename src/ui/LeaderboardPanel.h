@@ -12,6 +12,13 @@
 
 namespace LeaderboardPanel {
 
+static std::string FormatNum(int n) {
+    std::string s = std::to_string(n);
+    int ins = (int)s.size() - 3;
+    while (ins > 0) { s.insert(ins, ","); ins -= 3; }
+    return s;
+}
+
 inline void Render(GameState& gs) {
     if (!gs.showLeaderboard) return;
 
@@ -34,10 +41,10 @@ inline void Render(GameState& gs) {
                 ImGui::Spacing();
                 ImGui::TextColored(UIStyle::Muted, "No runs recorded yet. Win a game to appear here!");
             } else {
-                // Sort by score desc
+                // Sort by totalRevenue desc
                 auto sorted = gs.leaderboard;
                 std::sort(sorted.begin(), sorted.end(),
-                          [](const auto& a, const auto& b){ return a.score > b.score; });
+                          [](const auto& a, const auto& b){ return a.totalRevenue > b.totalRevenue; });
 
                 ImGui::Columns(4, "lb_local", true);
                 ImGui::SetColumnWidth(0, 60);  ImGui::TextColored(UIStyle::Muted, "Rank");   ImGui::NextColumn();
@@ -51,11 +58,11 @@ inline void Render(GameState& gs) {
                     ImVec4 col = (rank == 1) ? UIStyle::Gold
                                : (rank == 2) ? ImVec4(0.8f,0.8f,0.85f,1.f)
                                : (rank == 3) ? ImVec4(0.72f,0.45f,0.2f,1.f)
-                               : UIStyle::Normal;
+                               : UIStyle::TextPrimary;
                     ImGui::TextColored(col, "  #%d", rank); ImGui::NextColumn();
-                    ImGui::TextColored(col, "%s", e.name.c_str()); ImGui::NextColumn();
-                    ImGui::TextColored(col, "$%s", FormatNum(e.score).c_str()); ImGui::NextColumn();
-                    ImGui::TextColored(col, "%d mo", e.months); ImGui::NextColumn();
+                    ImGui::TextColored(col, "%s", e.agencyName.c_str()); ImGui::NextColumn();
+                    ImGui::TextColored(col, "$%s", FormatNum((int)e.totalRevenue).c_str()); ImGui::NextColumn();
+                    ImGui::TextColored(col, "%d mo", e.monthsPlayed); ImGui::NextColumn();
                     ++rank;
                     if (rank > 10) break;
                 }
@@ -106,7 +113,7 @@ inline void Render(GameState& gs) {
                 ImVec4 col = (e.rank == 1) ? UIStyle::Gold
                            : (e.rank == 2) ? ImVec4(0.8f,0.8f,0.85f,1.f)
                            : (e.rank == 3) ? ImVec4(0.72f,0.45f,0.2f,1.f)
-                           : UIStyle::Normal;
+                           : UIStyle::TextPrimary;
                 ImGui::TextColored(col, "  #%d", e.rank); ImGui::NextColumn();
                 ImGui::TextColored(col, "%s", e.name.c_str()); ImGui::NextColumn();
                 ImGui::TextColored(col, "$%s", FormatNum(e.score).c_str()); ImGui::NextColumn();
@@ -157,13 +164,5 @@ inline void Render(GameState& gs) {
     }
     ImGui::End();
 }
-
-private:
-    static std::string FormatNum(int n) {
-        std::string s = std::to_string(n);
-        int ins = (int)s.size() - 3;
-        while (ins > 0) { s.insert(ins, ","); ins -= 3; }
-        return s;
-    }
 
 } // namespace LeaderboardPanel
