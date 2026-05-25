@@ -16,13 +16,17 @@
 #include "systems/AICompetitor.h"
 #include "systems/SaveSystem.h"
 #include "systems/ToastSystem.h"
-#include "systems/AchievementSystem.h"   // v0.5
-#include "systems/StaffLeveling.h"       // v0.5
-#include "systems/SeasonalEvents.h"      // v0.5
+#include "systems/AchievementSystem.h"
+#include "systems/StaffLeveling.h"
+#include "systems/SeasonalEvents.h"
 
 // ── v0.8 Systems ─────────────────────────────────────────────────────────────
-#include "audio/AudioSystem.h"            // v0.8: OpenAL procedural audio
-#include "network/LeaderboardClient.h"    // v0.8: REST global leaderboard
+#include "audio/AudioSystem.h"
+#include "network/LeaderboardClient.h"
+
+// ── v1.0 Market Systems ──────────────────────────────────────────────────────
+#include "network/MarketFeed.h"          // v1.0: CoinGecko + Fear&Greed + FX
+#include "network/MarketEventBridge.h"   // v1.0: real market → game events
 
 // ── UI ──────────────────────────────────────────────────────────────────────
 #include "ui/Theme.h"
@@ -35,41 +39,40 @@
 #include "ui/Newsfeed.h"
 #include "ui/StaffPanel.h"
 #include "ui/ReportPanel.h"
-#include "ui/AchievementsPanel.h"        // v0.5
-#include "ui/TemplatesPanel.h"           // v0.5
-#include "ui/SaveSlotsPanel.h"           // v0.5
-#include "ui/LeaderboardPanel.h"         // v0.8
-#include "ui/SettingsPanel.h"            // v0.8
-
-// ── NegotiationPanel / GoalsPanel / SpecializationPanel (v0.2) ───────────────
+#include "ui/AchievementsPanel.h"
+#include "ui/TemplatesPanel.h"
+#include "ui/SaveSlotsPanel.h"
+#include "ui/LeaderboardPanel.h"
+#include "ui/SettingsPanel.h"
 #include "ui/NegotiationPanel.h"
 #include "ui/GoalsPanel.h"
 #include "ui/SpecializationPanel.h"
-
-// ── v0.9 Graphics ────────────────────────────────────────────────────────────
-#include "ui/SplashScreen.h"             // v0.9: ASCII logo + typewriter intro
-#include "ui/VictoryScreen.h"            // v0.9: confetti + stat cards
-#include "ui/EventPopup.h"               // v0.9: styled event modal
-#include "ui/AgencyBrandingPanel.h"      // v0.9: branding + logo picker
-// ChartRenderer.h is included directly inside StatsPanel.cpp
+#include "ui/SplashScreen.h"
+#include "ui/VictoryScreen.h"
+#include "ui/EventPopup.h"
+#include "ui/AgencyBrandingPanel.h"
+#include "ui/LiveMarketPanel.h"          // v1.0: Live Market tab
 
 static GameState  gs;
 static bool       gameStarted      = false;
 static bool       pendingNextMonth = false;
 static double     lastTime         = 0.0;
 
+// ── v1.0: Market feed timer ──────────────────────────────────────────────────
+static double     marketFetchTimer = 0.0;
+constexpr double  MARKET_FETCH_INTERVAL = 300.0; // 5 minutes
+
 // ── v0.9 global UI objects ───────────────────────────────────────────────────
 static SplashScreen        g_splash;
 static VictoryScreen       g_victory;
 static EventPopup          g_eventPopup;
 static AgencyBrandingPanel g_branding;
-static bool                g_showBranding = false;  // toggled from MainMenu NewGame
+static bool                g_showBranding = false;
 
 static void glfw_error_callback(int error, const char* desc) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, desc);
 }
 
-// ── helper: close all panels except target ───────────────────────────────────
 static void openOnly_v(bool& target) {
     bool* all[] = {
         &gs.showCampaigns, &gs.showClients, &gs.showStaff,
@@ -82,7 +85,6 @@ static void openOnly_v(bool& target) {
     target = true;
 }
 
-// ── Navbar ───────────────────────────────────────────────────────────────────
 void RenderNavbar() {
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(1280, 40), ImGuiCond_Always);
@@ -114,12 +116,29 @@ void RenderNavbar() {
     ImGui::SameLine();
     if (ImGui::Button(" Report     "))  openOnly(gs.showReport);
     ImGui::SameLine();
-    if (ImGui::Button(" [B]rand    "))  { g_showBranding = true; }        // v0.9
+    if (ImGui::Button(" [B]rand    "))  { g_showBranding = true; }
     ImGui::SameLine();
-    if (ImGui::Button(" \xf0\x9f\x8f\x86 Board   "))  openOnly(gs.showLeaderboard);  // v0.8
+    if (ImGui::Button(" \xf0\x9f\x8f\x86 Board   "))  openOnly(gs.showLeaderboard);
     ImGui::SameLine();
-    if (ImGui::Button(" \xe2\x9a\x99 Settings "))  openOnly(gs.showSettings);       // v0.8
+    if (ImGui::Button(" \xe2\x9a\x99 Settings "))  openOnly(gs.showSettings);
     ImGui::SameLine(0, 20);
+
+    // ── v1.0: Live market indicator in navbar ──────────────────────────────
+    const auto& ms = MarketFeed::Get().GetState();
+    ImVec4 mktCol = ms.btcChange24h > 2.0f  ? ImVec4(0.2f, 0.9f, 0.4f, 1.0f)
+                  : ms.btcChange24h < -2.0f ? ImVec4(0.9f, 0.3f, 0.3f, 1.0f)
+                  :                           ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+    ImGui::TextColored(mktCol, "BTC %+.1f%%", ms.btcChange24h);
+    ImGui::SameLine(0, 6);
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "|");
+    ImGui::SameLine(0, 6);
+    // Fear & Greed color: red <25, orange <45, yellow <55, green >55
+    ImVec4 fgCol = ms.fearGreedIndex < 25 ? ImVec4(0.9f, 0.2f, 0.2f, 1.0f)
+                 : ms.fearGreedIndex < 45 ? ImVec4(0.9f, 0.6f, 0.1f, 1.0f)
+                 : ms.fearGreedIndex < 55 ? ImVec4(0.9f, 0.9f, 0.2f, 1.0f)
+                 :                          ImVec4(0.2f, 0.85f, 0.4f, 1.0f);
+    ImGui::TextColored(fgCol, "F&G %d", ms.fearGreedIndex);
+    ImGui::SameLine(0, 12);
 
     ImVec4 budgetCol = gs.budget > 3000 ? UIStyle::Positive
                      : gs.budget > 0   ? UIStyle::Warning
@@ -133,17 +152,16 @@ void RenderNavbar() {
 
     if (UIStyle::GreenButton(" >> Next Month ")) {
         pendingNextMonth = true;
-        SOUND(ButtonClick);   // v0.8: audio feedback
+        SOUND(ButtonClick);
     }
     ImGui::SameLine();
     if (ImGui::Button(" \xf0\x9f\x92\xbe Save ")) {
         openOnly(gs.showSaveSlots);
-        SOUND(ButtonClick);   // v0.8
+        SOUND(ButtonClick);
     }
     ImGui::End();
 }
 
-// ── Game render ──────────────────────────────────────────────────────────────
 void RenderGame(float dt) {
     RenderNavbar();
 
@@ -160,16 +178,13 @@ void RenderGame(float dt) {
     Newsfeed::Render(gs);
     ReportPanel::Render(gs);
     SaveSlotsPanel::Render(gs);
-    LeaderboardPanel::Render(gs);          // v0.8
-    SettingsPanel::Render(gs);             // v0.8
-
+    LeaderboardPanel::Render(gs);
+    SettingsPanel::Render(gs);
     NegotiationPanel::Render(gs);
 
-    // ── v0.9: Agency Branding Panel ────────────────────────────────────────
     if (g_showBranding) {
         static int logoIdx = 0;
         if (g_branding.Render(gs.agencyName, gs.agencyColor, logoIdx)) {
-            // Confirmed: apply branding data to gs
             gs.agencyLogo  = std::to_string(logoIdx);
             g_showBranding  = false;
             TOAST_SUCCESS("Branding updated!");
@@ -177,25 +192,23 @@ void RenderGame(float dt) {
         }
     }
 
-    // ── v0.9: Pending event popup ──────────────────────────────────────────
     if (gs.pendingEventPopup) {
         MarketEventData evt;
         evt.id = gs.currentEvent.id;
         evt.title = gs.currentEvent.title;
         evt.description = gs.currentEvent.description;
         evt.effectText = gs.currentEvent.impact;
-        evt.category = "neutral"; // TODO: determine from event type
+        evt.category = "neutral";
         evt.durationMonths = gs.currentEvent.durationMonths;
         g_eventPopup.Show(evt);
         gs.pendingEventPopup = false;
     }
-    g_eventPopup.Render();                 // v0.9
+    g_eventPopup.Render();
 
     ToastSystem::Get().Update(dt);
     ToastSystem::Get().Render();
-    AudioSystem::Get().Tick();             // v0.8: cleanup finished sources
+    AudioSystem::Get().Tick();
 
-    // ── v0.9: Victory Screen (replaces basic overlay) ──────────────────────
     if (gs.victory) {
         if (!g_victory.IsOpen()) {
             VictoryStats vstats;
@@ -203,7 +216,7 @@ void RenderGame(float dt) {
             vstats.totalRevenue = gs.stats.totalRevenue;
             vstats.monthsPlayed = gs.stats.monthsPlayed;
             vstats.clientsServed = gs.stats.clientsAcquired;
-            vstats.achievementsEarned = 0; // TODO: count unlocked achievements
+            vstats.achievementsEarned = 0;
             vstats.campaignsRun = gs.stats.campaignsCompleted;
             vstats.bestMonthRevenue = gs.stats.bestMonthRevenue;
             vstats.agencyName = gs.agencyName;
@@ -211,19 +224,16 @@ void RenderGame(float dt) {
             g_victory.Open(vstats);
             SOUND(Victory);
         }
-        int vr = g_victory.Render();     // v0.9: animated confetti
+        int vr = g_victory.Render();
         if (vr == 1) {
-            // Play Again
             gs           = GameState();
             gameStarted  = false;
             MainMenu::s_showMenu = true;
         } else if (vr == 2) {
-            // Submit to Leaderboard
             openOnly_v(gs.showLeaderboard);
         }
     }
 
-    // ── Lose overlay ───────────────────────────────────────────────────────
     if (gs.gameOver) {
         ImVec2 c = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -241,7 +251,6 @@ void RenderGame(float dt) {
     }
 }
 
-// ── Entry point ──────────────────────────────────────────────────────────────
 int main() {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return -1;
@@ -251,7 +260,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(
-        1280, 720, "AdEmpire v0.9 \xe2\x80\x94 Marketing Tycoon", nullptr, nullptr);
+        1280, 720, "AdEmpire v1.0 \xe2\x80\x94 Marketing Tycoon", nullptr, nullptr);
     if (!window) return -1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -261,15 +270,16 @@ int main() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // v1.0: docking
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
-    Theme::ApplyDarkMarketing();
+    Theme::Init();  // v1.0: Roboto + full palette (replaces ApplyDarkMarketing)
 
-    // ── v0.8: init audio ──────────────────────────────────────────────────
     AudioSystem::Get().Init();
 
-    // ── v0.9: splash runs first, before game loop blocks ─────────────────
-    // g_splash renders inside the main loop below via IsDone() check
+    // ── v1.0: Initial market fetch (async, non-blocking) ──────────────────
+    MarketFeed::Get().FetchAsync();
+    marketFetchTimer = 0.0;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -277,21 +287,25 @@ int main() {
         float  dt  = (float)(now - lastTime);
         lastTime   = now;
 
+        // ── v1.0: Refresh market data every 5 minutes ─────────────────────
+        marketFetchTimer += dt;
+        if (marketFetchTimer >= MARKET_FETCH_INTERVAL) {
+            MarketFeed::Get().FetchAsync();
+            marketFetchTimer = 0.0;
+        }
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // ── v0.9: Splash gate ─────────────────────────────────────────────
         if (!g_splash.IsDone()) {
             g_splash.Render();
         }
-        // ── Branding gate on first NewGame ────────────────────────────────
         else if (g_showBranding && !gameStarted) {
             static int logoIdx = 0;
             if (g_branding.Render(gs.agencyName, gs.agencyColor, logoIdx)) {
                 gs.agencyLogo  = std::to_string(logoIdx);
                 g_showBranding = false;
-                // Now actually start the game
                 AchievementSystem::Init(gs);
                 TOAST_SUCCESS("Agency founded! Good luck.");
                 SOUND(Notification);
@@ -300,11 +314,15 @@ int main() {
         }
         else if (!gameStarted) {
             if (MainMenu::Render(gs)) {
-                // v0.9: show branding before entering game
                 g_showBranding = true;
             }
         } else {
             if (pendingNextMonth) {
+                // ── v1.0: Apply real market modifiers before advancing ─────
+                MarketEventBridge::Get().EvaluateAndTrigger(gs);
+                float revMult = MarketEventBridge::Get().GetRevenueMultiplier();
+                gs.revenueMultiplier = revMult;  // applied in Simulation::AdvanceMonth
+
                 SeasonalEvents::Apply(gs);
                 EventSystem::TryTriggerEvent(gs);
                 AICompetitor::ProcessTurn(gs);
@@ -324,16 +342,19 @@ int main() {
 
                 pendingNextMonth = false;
 
+                // ── Toast with market context ──────────────────────────────
                 float profit = gs.monthlyRevenue - gs.monthlyExpenses;
+                std::string mktNote = "";
+                if (revMult > 1.3f) mktNote = " (Market: BULL +" + std::to_string((int)((revMult-1)*100)) + "%)";
+                if (revMult < 0.8f) mktNote = " (Market: BEAR " + std::to_string((int)((revMult-1)*100)) + "%)";
                 if (profit >= 0) {
-                    TOAST_SUCCESS("Profitable month! +$" + std::to_string((int)profit));
-                    SOUND(MonthAdvanced);          // v0.8
+                    TOAST_SUCCESS("Profitable month! +$" + std::to_string((int)profit) + mktNote);
+                    SOUND(MonthAdvanced);
                 } else {
-                    TOAST_WARN("Monthly loss: -$" + std::to_string((int)(-profit)));
-                    SOUND(Notification);           // v0.8
+                    TOAST_WARN("Monthly loss: -$" + std::to_string((int)(-profit)) + mktNote);
+                    SOUND(Notification);
                 }
 
-                // v0.8/v0.9: victory/gameover sounds handled in RenderGame
                 if (gs.gameOver) SOUND(GameOver);
             }
             RenderGame(dt);
@@ -349,7 +370,7 @@ int main() {
         glfwSwapBuffers(window);
     }
 
-    AudioSystem::Get().Shutdown();  // v0.8: clean OpenAL
+    AudioSystem::Get().Shutdown();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
