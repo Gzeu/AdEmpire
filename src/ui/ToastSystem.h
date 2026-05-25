@@ -9,51 +9,83 @@ enum class ToastType { Info, Success, Warning, Error };
 struct Toast {
     std::string text;
     ToastType   type;
-    float       lifetime;   // seconds remaining
-    float       maxLife;
+    float       lifetime; // seconds remaining
+    float       maxLife;  // initial lifetime
 };
 
 class ToastSystem {
 public:
-    static ToastSystem& Get() { static ToastSystem t; return t; }
+    static ToastSystem& Get();
 
-    void Push(const std::string& msg, ToastType type = ToastType::Info, float life = 3.5f) {
-        toasts.push_back({msg, type, life, life});
-        if (toasts.size() > 6) toasts.erase(toasts.begin());
-    }
+    void Push(const std::string& text, ToastType type = ToastType::Info, float lifetime = 3.5f);
+    void Render(); // call once per frame, draws overlays top-right
+    void Update(float dt);
 
-    void Tick(float dt) {
-        for (auto& t : toasts) t.lifetime -= dt;
-        toasts.erase(std::remove_if(toasts.begin(), toasts.end(),
-            [](const Toast& t){ return t.lifetime <= 0; }), toasts.end());
-    }
+private:
+    ToastSystem() = default;
+    std::vector<Toast> toasts;
 
-    void Render(float screenW, float screenH) {
-        float yOffset = screenH - 60.f;
-        for (int i = (int)toasts.size() - 1; i >= 0; i--) {
-            auto& t = toasts[i];
-            float alpha = std::min(t.lifetime / 0.5f, 1.f); // fade out last 0.5s
-            ImVec4 col;
-            switch (t.type) {
-                case ToastType::Success: col = ImVec4(0.2f,0.85f,0.4f,alpha); break;
-                case ToastType::Warning: col = ImVec4(1.f,0.75f,0.1f,alpha); break;
-                case ToastType::Error:   col = ImVec4(1.f,0.3f,0.3f,alpha);  break;
-                default:                 col = ImVec4(0.5f,0.8f,1.f,alpha);  break;
-            }
-            ImGui::SetNextWindowBgAlpha(0.88f * alpha);
-            ImGui::SetNextWindowPos(ImVec2(screenW - 380.f, yOffset), ImGuiCond_Always);
-            ImGui::SetNextWindowSize(ImVec2(370.f, 42.f));
-            char wid[32]; snprintf(wid, 32, "##toast%d", i);
-            ImGui::Begin(wid, nullptr,
-                ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
-                ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus);
-            ImGui::TextColored(col, "%s", t.text.c_str());
-            // Progress bar
-            ImGui::ProgressBar(t.lifetime / t.maxLife, ImVec2(-1, 4), "");
-            ImGui::End();
-            yOffset -= 52.f;
+    static ImVec4 ColorForType(ToastType t) {
+        switch (t) {
+        case ToastType::Success: return ImVec4(0.2f, 0.9f, 0.4f, 1.f);
+        case ToastType::Warning: return ImVec4(1.0f, 0.7f, 0.1f, 1.f);
+        case ToastType::Error:   return ImVec4(1.0f, 0.3f, 0.3f, 1.f);
+        default:                 return ImVec4(0.5f, 0.8f, 1.0f, 1.f);
         }
     }
-
-    std::vector<Toast> toasts;
+    static const char* IconForType(ToastType t) {
+        switch (t) {
+        case ToastType::Success: return "[OK]";
+        case ToastType::Warning: return "[!!]";
+        case ToastType::Error:   return "[XX]";
+        default:                 return "[i] ";
+        }
+    }
 };
+
+inline ToastSystem& ToastSystem::Get() {
+    static ToastSystem instance;
+    return instance;
+}
+
+inline void ToastSystem::Push(const std::string& text, ToastType type, float lifetime) {
+    if (toasts.size() >= 6) toasts.erase(toasts.begin());
+    toasts.push_back({text, type, lifetime, lifetime});
+}
+
+inline void ToastSystem::Update(float dt) {
+    for (auto& t : toasts) t.lifetime -= dt;
+    toasts.erase(std::remove_if(toasts.begin(), toasts.end(),
+        [](const Toast& t) { return t.lifetime <= 0.f; }), toasts.end());
+}
+
+inline void ToastSystem::Render() {
+    if (toasts.empty()) return;
+    ImGuiIO& io = ImGui::GetIO();
+    float startY = 50.f;
+    for (int i = (int)toasts.size() - 1; i >= 0; i--) {
+        auto& t = toasts[i];
+        float alpha = std::min(1.f, t.lifetime / 0.4f); // fade last 0.4s
+        float progress = 1.f - (t.lifetime / t.maxLife);
+
+        ImGui::SetNextWindowBgAlpha(0.88f * alpha);
+        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 320.f, startY), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(310.f, 0.f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.f);
+        char wid[32]; snprintf(wid, 32, "##toast%d", i);
+        ImGui::Begin(wid, nullptr,
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoFocusOnAppearing);
+
+        ImGui::TextColored(ColorForType(t.type), "%s %s", IconForType(t.type), t.text.c_str());
+        // lifetime progress bar
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ColorForType(t.type));
+        ImGui::ProgressBar(1.f - progress, ImVec2(-1.f, 3.f), "");
+        ImGui::PopStyleColor();
+
+        startY += ImGui::GetWindowHeight() + 6.f;
+        ImGui::End();
+        ImGui::PopStyleVar();
+    }
+}

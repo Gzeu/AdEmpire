@@ -1,71 +1,69 @@
 #include "StatsTracker.h"
-#include <numeric>
 #include <algorithm>
 
 StatsTracker& StatsTracker::Get() {
-    static StatsTracker inst;
-    return inst;
+    static StatsTracker instance;
+    return instance;
 }
 
-void StatsTracker::Reset() {
-    m_channels   = {};
-    m_industries = {};
-    m_history.clear();
+void StatsTracker::RecordMonth(const GameState& gs) {
+    MonthSnapshot snap;
+    snap.month         = gs.month;
+    snap.year          = gs.year;
+    snap.revenue       = gs.monthlyRevenue;
+    snap.expenses      = gs.monthlyExpenses;
+    snap.marketShare   = gs.playerMarketShare;
+    snap.activeClients = 0;
+    for (auto& c : gs.clients) if (c.active) snap.activeClients++;
+    history.push_back(snap);
+    if (history.size() > 48) history.erase(history.begin()); // keep 4 years max
 }
 
-void StatsTracker::RecordCampaignRevenue(ChannelType ch, float revenue, float spent, float reach) {
-    auto& s = m_channels[(int)ch];
-    s.totalRevenue += revenue;
-    s.totalSpent   += spent;
-    s.totalReach   += reach;
-    s.campaigns++;
-}
-
-void StatsTracker::RecordCampaignCompleted(ChannelType ch) {
-    m_channels[(int)ch].completed++;
+void StatsTracker::RecordCampaignRevenue(ChannelType ch, float revenue, float spent) {
+    auto& s = channelStats[(int)ch];
+    s.totalRevenue  += revenue;
+    s.totalSpent    += spent;
+    s.campaignCount++;
+    if (revenue > 0.f) s.wins++;
 }
 
 void StatsTracker::RecordPitch(ClientIndustry ind, bool won) {
-    auto& s = m_industries[(int)ind];
-    s.pitches++;
-    if (won) s.wins++; else s.losses++;
+    auto& s = industryStats[(int)ind];
+    s.pitched++;
+    if (won) s.won++;
+    else     s.lost++;
 }
 
-void StatsTracker::RecordClientSatisfaction(ClientIndustry ind, float sat) {
-    auto& s = m_industries[(int)ind];
-    s.satisfactionSamples++;
-    s.avgSatisfaction += (sat - s.avgSatisfaction) / s.satisfactionSamples; // running avg
+const ChannelStats& StatsTracker::GetChannelStats(ChannelType ch) const {
+    return channelStats[(int)ch];
 }
 
-void StatsTracker::TakeMonthSnapshot(const GameState& gs) {
-    int activeClients = 0, activeCampaigns = 0;
-    for (auto& c  : gs.clients)   if (c.active)  activeClients++;
-    for (auto& cp : gs.campaigns) if (cp.active) activeCampaigns++;
-    m_history.push_back({
-        gs.month, gs.year,
-        gs.monthlyRevenue, gs.monthlyExpenses,
-        gs.budget, gs.playerMarketShare,
-        activeClients, activeCampaigns
-    });
-    if (m_history.size() > 36)
-        m_history.erase(m_history.begin());
+const IndustryStats& StatsTracker::GetIndustryStats(ClientIndustry ind) const {
+    return industryStats[(int)ind];
 }
 
-float StatsTracker::GetChannelRevenueShare(ChannelType ch) const {
-    float total = 0.f;
-    for (auto& s : m_channels) total += s.totalRevenue;
-    if (total == 0) return 0.f;
-    return m_channels[(int)ch].totalRevenue / total * 100.f;
+float StatsTracker::GetWinRateForIndustry(ClientIndustry ind) const {
+    auto& s = industryStats[(int)ind];
+    return s.pitched > 0 ? (float)s.won / s.pitched : 0.f;
 }
 
-float StatsTracker::GetPitchWinRate(ClientIndustry ind) const {
-    auto& s = m_industries[(int)ind];
-    if (s.pitches == 0) return 0.f;
-    return (float)s.wins / s.pitches * 100.f;
+float StatsTracker::GetROIForChannel(ChannelType ch) const {
+    auto& s = channelStats[(int)ch];
+    if (s.totalSpent <= 0.f) return 0.f;
+    return (s.totalRevenue / s.totalSpent) * 100.f;
 }
 
-float StatsTracker::GetROI(ChannelType ch) const {
-    auto& s = m_channels[(int)ch];
-    if (s.totalSpent == 0) return 0.f;
-    return (s.totalRevenue / s.totalSpent - 1.f) * 100.f;
+void StatsTracker::FillRevenueHistory(float* out, int maxCount) const {
+    int n = (int)std::min((int)history.size(), maxCount);
+    for (int i = 0; i < n; i++)
+        out[i] = history[history.size() - n + i].revenue;
+    for (int i = n; i < maxCount; i++) out[i] = 0.f;
+}
+
+void StatsTracker::FillChannelRevenue(float out[6]) const {
+    for (int i = 0; i < 6; i++) out[i] = channelStats[i].totalRevenue;
+}
+
+void StatsTracker::FillIndustryWinRate(float out[8]) const {
+    for (int i = 0; i < 8; i++) out[i] = GetWinRateForIndustry((ClientIndustry)i);
 }

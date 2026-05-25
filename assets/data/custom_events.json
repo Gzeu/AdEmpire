@@ -1,16 +1,219 @@
 [
   {
-    "_comment": "Add your custom events here. They will be merged with the base event pool.",
-    "title": "Example Custom Event",
-    "description": "This is a moddable event. Edit this file to create your own market events.",
-    "impact": "Social +20%",
-    "socialMod": 1.2,
-    "seoMod": 1.0,
-    "emailMod": 1.0,
-    "influencerMod": 1.0,
-    "prMod": 1.0,
-    "paidMod": 1.0,
-    "budgetImpact": 0,
-    "durationMonths": 1
+    "title": "Algorithm Update",
+    "description": "A major social platform changed its algorithm. Organic reach drops.",
+    "impact": "Social -40%",
+    "social": 0.6, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Viral Trend Surge",
+    "description": "A viral challenge boosts social media engagement across all brands.",
+    "impact": "Social +60%, Influencer +30%",
+    "social": 1.6, "seo": 1.0, "email": 1.0, "influencer": 1.3, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 0, "duration": 1
+  },
+  {
+    "title": "Platform Outage",
+    "description": "Major social platform is down 24 hours. Campaigns paused automatically.",
+    "impact": "Social -80%",
+    "social": 0.2, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": -500, "duration": 1
+  },
+  {
+    "title": "TikTok Boom",
+    "description": "Short-form video content sees 3x engagement spike. Brands rush to capitalize.",
+    "impact": "Social +50%, Influencer +50%",
+    "social": 1.5, "seo": 1.0, "email": 1.0, "influencer": 1.5, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Google Core Update",
+    "description": "Search engine reshuffles rankings. Many sites lose 30% organic traffic.",
+    "impact": "SEO -30%",
+    "social": 1.0, "seo": 0.7, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Featured Snippet Goldmine",
+    "description": "New SERP features dramatically boost organic CTR for well-optimized sites.",
+    "impact": "SEO +40%",
+    "social": 1.0, "seo": 1.4, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "GDPR Fine Wave",
+    "description": "Mass non-compliance fines hit agencies. Email lists shrink 50%.",
+    "impact": "Email -50%",
+    "social": 1.0, "seo": 1.0, "email": 0.5, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": -2000, "duration": 1
+  },
+  {
+    "title": "Newsletter Renaissance",
+    "description": "Consumers prefer curated email over algorithmic feeds. Open rates surge.",
+    "impact": "Email +30%",
+    "social": 1.0, "seo": 1.0, "email": 1.3, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 0, "duration": 3
+  },
+  {
+    "title": "Influencer Scandal",
+    "description": "Top influencer caught faking engagement metrics. Brands pull back.",
+    "impact": "Influencer -60%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 0.4, "pr": 1.0, "paid": 1.0,
+    "budget_impact": -1000, "duration": 2
+  },
+  {
+    "title": "Micro-Influencer Wave",
+    "description": "Brands shift to micro-influencers for higher trust and cheaper rates.",
+    "impact": "Influencer +70%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.7, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 0, "duration": 3
+  },
+  {
+    "title": "Industry Award Season",
+    "description": "PR visibility peaks. Brands that win coverage see 40% more reach.",
+    "impact": "PR +40%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.4, "paid": 1.0,
+    "budget_impact": 0, "duration": 1
+  },
+  {
+    "title": "Media Crisis",
+    "description": "Negative press cycle dominates news. PR campaigns get buried.",
+    "impact": "PR -40%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 0.6, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Recession Warning",
+    "description": "Businesses cut ad budgets 20%. Marketing spend drops across all sectors.",
+    "impact": "All channels -20%",
+    "social": 0.8, "seo": 0.8, "email": 0.8, "influencer": 0.8, "pr": 0.8, "paid": 0.8,
+    "budget_impact": -3000, "duration": 3
+  },
+  {
+    "title": "Economic Boom",
+    "description": "Consumer spending hits record highs. All marketing channels benefit.",
+    "impact": "All channels +25%",
+    "social": 1.25, "seo": 1.25, "email": 1.25, "influencer": 1.25, "pr": 1.25, "paid": 1.25,
+    "budget_impact": 2000, "duration": 2
+  },
+  {
+    "title": "VC Funding Wave",
+    "description": "Tech startups flush with Series A money. All seeking brand agencies.",
+    "impact": "+$5,000 bonus",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 5000, "duration": 1
+  },
+  {
+    "title": "Rival Agency Scandal",
+    "description": "Competitor caught faking campaign metrics. Clients looking for alternatives.",
+    "impact": "+$1,000 bonus + available clients",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.0,
+    "budget_impact": 1000, "duration": 1
+  },
+  {
+    "title": "New Competitor Entry",
+    "description": "A well-funded agency enters the market with aggressive pricing.",
+    "impact": "AI rivals +aggressiveness",
+    "social": 0.95, "seo": 0.95, "email": 0.95, "influencer": 0.95, "pr": 0.95, "paid": 0.95,
+    "budget_impact": 0, "duration": 3
+  },
+  {
+    "title": "AI Ads Revolution",
+    "description": "AI-generated ads outperform manual. Agencies using AI tools see 30% boost.",
+    "impact": "All channels +30%",
+    "social": 1.3, "seo": 1.3, "email": 1.3, "influencer": 1.3, "pr": 1.3, "paid": 1.3,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Cookie Apocalypse",
+    "description": "Third-party cookies fully deprecated. Targeting gets harder for paid ads.",
+    "impact": "Paid -50%, Email +20%",
+    "social": 1.0, "seo": 1.0, "email": 1.2, "influencer": 1.0, "pr": 1.0, "paid": 0.5,
+    "budget_impact": 0, "duration": 3
+  },
+  {
+    "title": "Connected TV Surge",
+    "description": "Streaming ad placements show 2x ROI vs desktop. Paid Search benefits.",
+    "impact": "Paid +40%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.4,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Black Friday Rush",
+    "description": "Holiday shopping season peaks. All retail clients double their budgets.",
+    "impact": "All channels +60%",
+    "social": 1.6, "seo": 1.6, "email": 1.6, "influencer": 1.6, "pr": 1.6, "paid": 1.6,
+    "budget_impact": 4000, "duration": 1
+  },
+  {
+    "title": "Summer Slump",
+    "description": "Consumer attention drops in summer. Lower engagement across all channels.",
+    "impact": "All channels -20%",
+    "social": 0.8, "seo": 0.85, "email": 0.8, "influencer": 0.9, "pr": 0.85, "paid": 0.8,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Data Breach Panic",
+    "description": "Major data breach spooks users. Email open rates drop, trust plummets.",
+    "impact": "Email -40%, PR -20%",
+    "social": 1.0, "seo": 1.0, "email": 0.6, "influencer": 1.0, "pr": 0.8, "paid": 1.0,
+    "budget_impact": -1500, "duration": 2
+  },
+  {
+    "title": "Streaming Wars Escalate",
+    "description": "New streaming platforms launch. Influencer partnerships multiply in value.",
+    "impact": "Influencer +40%, PR +20%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.4, "pr": 1.2, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Crypto Bull Run",
+    "description": "Crypto markets rally. Finance clients increase marketing spend dramatically.",
+    "impact": "+$3,000 bonus, Paid +20%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 1.2,
+    "budget_impact": 3000, "duration": 2
+  },
+  {
+    "title": "Sustainability Trend",
+    "description": "Eco-conscious consumers reward green brands. Content about sustainability gets 2x reach.",
+    "impact": "Social +30%, Email +20%",
+    "social": 1.3, "seo": 1.1, "email": 1.2, "influencer": 1.0, "pr": 1.15, "paid": 1.0,
+    "budget_impact": 0, "duration": 3
+  },
+  {
+    "title": "Remote Work Boom",
+    "description": "Remote workers drive B2B and SaaS spending. Tech clients increase budgets.",
+    "impact": "SEO +25%, Email +15%",
+    "social": 1.0, "seo": 1.25, "email": 1.15, "influencer": 1.0, "pr": 1.0, "paid": 1.1,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Brand Safety Crisis",
+    "description": "Ads appearing next to controversial content. Clients pause spend.",
+    "impact": "Paid -30%, Social -20%",
+    "social": 0.8, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 0.7,
+    "budget_impact": -2000, "duration": 2
+  },
+  {
+    "title": "Local SEO Gold Rush",
+    "description": "Google promotes local results. Agencies with local expertise dominate.",
+    "impact": "SEO +50%, PR +15%",
+    "social": 1.0, "seo": 1.5, "email": 1.0, "influencer": 1.0, "pr": 1.15, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Podcast Advertising Surge",
+    "description": "Podcast listeners hit record numbers. Influencer and PR channels see cross-promotion spike.",
+    "impact": "Influencer +25%, PR +25%",
+    "social": 1.0, "seo": 1.0, "email": 1.0, "influencer": 1.25, "pr": 1.25, "paid": 1.0,
+    "budget_impact": 0, "duration": 2
+  },
+  {
+    "title": "Political Ad Blackout",
+    "description": "Election cycle causes platforms to restrict ad targeting. Campaign reach drops.",
+    "impact": "Paid -40%, Social -20%",
+    "social": 0.8, "seo": 1.0, "email": 1.0, "influencer": 1.0, "pr": 1.0, "paid": 0.6,
+    "budget_impact": -1000, "duration": 1
   }
 ]

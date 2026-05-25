@@ -3,57 +3,55 @@
 #include <array>
 #include <string>
 
-// Tracks per-channel, per-industry and per-month stats for advanced charts
+// Per-channel stats accumulated each month
 struct ChannelStats {
     float totalRevenue  = 0.f;
-    float totalReach    = 0.f;
     float totalSpent    = 0.f;
-    int   campaigns     = 0;
-    int   completed     = 0;
+    int   campaignCount = 0;
+    int   wins          = 0; // campaigns that generated > 0 revenue
 };
 
+// Per-industry stats
 struct IndustryStats {
-    int   pitches       = 0;
-    int   wins          = 0;
-    int   losses        = 0;
-    float totalRevenue  = 0.f;
-    float avgSatisfaction = 0.f;
-    int   satisfactionSamples = 0;
+    int   pitched  = 0;
+    int   won      = 0;
+    int   lost     = 0;
+    float revenue  = 0.f;
 };
 
+// Monthly snapshot for history charts
 struct MonthSnapshot {
-    int   month;
-    int   year;
+    int   month, year;
     float revenue;
     float expenses;
-    float budget;
     float marketShare;
     int   activeClients;
-    int   activeCampaigns;
 };
 
 class StatsTracker {
 public:
     static StatsTracker& Get();
 
-    void Reset();
-    void RecordCampaignRevenue(ChannelType ch, float revenue, float spent, float reach);
-    void RecordCampaignCompleted(ChannelType ch);
+    void RecordMonth(const GameState& gs);
+    void RecordCampaignRevenue(ChannelType ch, float revenue, float spent);
     void RecordPitch(ClientIndustry ind, bool won);
-    void RecordClientSatisfaction(ClientIndustry ind, float sat);
-    void TakeMonthSnapshot(const GameState& gs);
 
     // Accessors for UI
-    const ChannelStats&  GetChannel(ChannelType ch) const  { return m_channels[(int)ch]; }
-    const IndustryStats& GetIndustry(ClientIndustry ind) const { return m_industries[(int)ind]; }
-    const std::vector<MonthSnapshot>& GetHistory() const   { return m_history; }
-    float GetChannelRevenueShare(ChannelType ch) const;
-    float GetPitchWinRate(ClientIndustry ind) const;
-    float GetROI(ChannelType ch) const;
+    const ChannelStats&              GetChannelStats(ChannelType ch) const;
+    const IndustryStats&             GetIndustryStats(ClientIndustry ind) const;
+    const std::vector<MonthSnapshot>& GetHistory() const { return history; }
+
+    float GetWinRateForIndustry(ClientIndustry ind) const;
+    float GetROIForChannel(ChannelType ch) const;
+
+    // Chart data helpers (fills float arrays for ImGui::PlotLines)
+    void FillRevenueHistory(float* out, int maxCount) const;
+    void FillChannelRevenue(float out[6]) const;
+    void FillIndustryWinRate(float out[8]) const;
 
 private:
-    StatsTracker() { Reset(); }
-    std::array<ChannelStats,  6> m_channels;
-    std::array<IndustryStats, 8> m_industries;
-    std::vector<MonthSnapshot>   m_history;  // up to 36 months
+    StatsTracker() = default;
+    std::array<ChannelStats,  6> channelStats  = {};
+    std::array<IndustryStats, 8> industryStats = {};
+    std::vector<MonthSnapshot>   history;
 };

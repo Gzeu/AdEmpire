@@ -1,27 +1,21 @@
 #pragma once
 #include "../core/GameState.h"
 
-struct MonthlyReport {
-    int   month;
-    int   year;
-    float totalRevenue;
-    float totalExpenses;
-    float netProfit;
-    float revenueByChannel[6];  // indexed by ChannelType
-    int   clientsWon;
-    int   clientsLost;
-    float marketShareDelta;
-    float marketShareEnd;
-    float topCampaignFee;
-    std::string topCampaignName;
-    int   campaignsCompleted;
-    int   activeCampaigns;
-};
-
 class ReportPanel {
 public:
     static void Render(GameState& gs);
-    static void GenerateReport(GameState& gs); // call at month end
-    static MonthlyReport s_last;
-    static bool          s_showOnMonthEnd;
+    static void GenerateMonthlyReport(const GameState& gs);
+
+private:
+    struct ReportData {
+        int   month = 0, year = 0;
+        float revenue = 0.f, expenses = 0.f, profit = 0.f;
+        float marketShare = 0.f;
+        int   activeClients = 0, activeCampaigns = 0;
+        float bestCampaignFee = 0.f;
+        std::string bestCampaignName;
+        int   eventsCount = 0;
+    };
+    static ReportData s_last;
+    static bool       s_hasReport;
 };
