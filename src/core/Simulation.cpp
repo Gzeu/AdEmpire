@@ -1,13 +1,13 @@
 #include "Simulation.h"
-#include "../ui/Newsfeed.h"
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
-#include <cstdio>
 
-static const float BASE_REACH_PER_DOLLAR[] = { 50.f, 20.f, 80.f, 30.f, 15.f, 40.f };
-static const float BASE_CTR[]              = { 0.025f, 0.04f, 0.02f, 0.05f, 0.01f, 0.035f };
-static const float BASE_CONV[]             = { 0.015f, 0.03f, 0.02f, 0.025f, 0.01f, 0.03f };
+// Rebalanced v0.3: reach, ctr, conv tuned for 18% agency fee
+static const float BASE_REACH_PER_DOLLAR[] = { 45.f, 18.f, 70.f, 28.f, 12.f, 38.f };
+static const float BASE_CTR[]              = { 0.028f, 0.045f, 0.022f, 0.055f, 0.012f, 0.038f };
+static const float BASE_CONV[]             = { 0.018f, 0.032f, 0.022f, 0.028f, 0.012f, 0.032f };
+static const float AGENCY_FEE_RATE        = 0.18f;  // 18% (was 15%)
 
 float Simulation::GetChannelMod(ChannelType ch, const GameState& gs) {
     auto it = gs.channelModifiers.find(ch);
@@ -18,7 +18,7 @@ float Simulation::CalcReach(const Campaign& c, const GameState& gs) {
     int idx = (int)c.channel;
     float staffBonus = 1.0f;
     for (auto& s : gs.staff)
-        if ((int)s.role == idx) staffBonus += s.skill * 0.2f;
+        if ((int)s.role == idx) staffBonus += s.skill * 0.25f;
     return c.budget * BASE_REACH_PER_DOLLAR[idx] * GetChannelMod(c.channel, gs) * staffBonus;
 }
 
@@ -26,7 +26,7 @@ float Simulation::CalcCTR(const Campaign& c, const GameState& gs) {
     int idx = (int)c.channel;
     float base = BASE_CTR[idx] * GetChannelMod(c.channel, gs);
     float qualMod = 0.5f + (c.qualityScore / 10.f) * 0.5f;
-    return std::min(base * qualMod, 0.15f);
+    return std::min(base * qualMod, 0.18f);
 }
 
 float Simulation::CalcConversionRate(const Campaign& c, const GameState& gs) {
@@ -35,12 +35,12 @@ float Simulation::CalcConversionRate(const Campaign& c, const GameState& gs) {
 }
 
 float Simulation::CalcRevenue(const Campaign& c, const GameState& gs) {
-    float r = CalcReach(c, gs);
-    float ctr = CalcCTR(c, gs);
+    float r    = CalcReach(c, gs);
+    float ctr  = CalcCTR(c, gs);
     float conv = CalcConversionRate(c, gs);
-    float aov = 50.f;
+    float aov  = 50.f;
     for (auto& cl : gs.clients)
-        if (cl.id == c.clientId) { aov = cl.budget * 0.1f; break; }
+        if (cl.id == c.clientId) { aov = cl.budget * 0.12f; break; }
     return r * ctr * conv * aov;
 }
 
@@ -50,62 +50,45 @@ void Simulation::ProcessCampaign(Campaign& c, GameState& gs) {
     c.ctr            = CalcCTR(c, gs);
     c.conversionRate = CalcConversionRate(c, gs);
     c.revenue        = CalcRevenue(c, gs);
-    c.agencyFee      = c.revenue * 0.15f;
+    c.agencyFee      = c.revenue * AGENCY_FEE_RATE;
     c.monthsLeft--;
     if (c.monthsLeft <= 0) {
         c.active    = false;
         c.completed = true;
         gs.stats.campaignsCompleted++;
-        // Newsfeed notification
-        char msg[128];
-        snprintf(msg, 128, "Campaign '%s' completed. Agency fee: $%.0f",
-            c.name.c_str(), c.agencyFee);
-        Newsfeed::PushNews(msg, 0.4f, 1.f, 0.6f);
     }
 }
 
-void Simulation::UpdateClientSatisfaction(Client& cl, GameState& gs) {
+void Simulation::UpdateClientSatisfaction(Client& cl, const GameState& gs) {
     float totalRevenue = 0.f;
-    int   activeCamps  = 0;
+    int activeCamps = 0;
     for (auto& c : gs.campaigns)
         if (c.clientId == cl.id && c.active) {
             totalRevenue += c.revenue;
             activeCamps++;
         }
-    float expected = cl.budget * 0.5f;
-    float delta = (totalRevenue - expected) / (expected + 1.f) * 20.f;
-    cl.satisfaction = std::clamp(cl.satisfaction + delta, 0.f, 100.f);
-    if (activeCamps == 0) cl.satisfaction -= 5.f;
-    cl.satisfaction = std::max(cl.satisfaction, 0.f);
+    float expected = cl.budget * 0.55f;
+    float delta = (totalRevenue - expected) / (expected + 1.f) * 18.f;
+    cl.satisfaction = std::clamp(cl.satisfaction + delta - 0.5f, 0.f, 100.f);
+    if (activeCamps == 0) cl.satisfaction = std::max(0.f, cl.satisfaction - 5.5f);
     cl.contractMonths--;
-
-    if (cl.contractMonths <= 0) {
-        if (cl.satisfaction < 50.f) {
-            cl.active = false;
-            gs.stats.clientsLost++;
-            char msg[128];
-            snprintf(msg, 128, "Client '%s' left due to low satisfaction (%.0f%%)!",
-                cl.name.c_str(), cl.satisfaction);
-            Newsfeed::PushNews(msg, 1.f, 0.3f, 0.3f);
-        } else {
-            cl.contractMonths = 6;
-            char msg[128];
-            snprintf(msg, 128, "Client '%s' renewed contract for 6 months!",
-                cl.name.c_str());
-            Newsfeed::PushNews(msg, 0.4f, 0.9f, 0.4f);
-        }
+    if (cl.contractMonths <= 0 && cl.satisfaction < 50.f) {
+        cl.active = false;
+        gs.stats.clientsLost++;
     }
 }
 
 void Simulation::ProcessAICompetitors(GameState& gs) {
     for (auto& ai : gs.competitors) {
-        float growth = (float)(rand() % 10 - 3) * 0.1f * ai.aggressiveness;
+        // AI grows naturally
+        float growth = (float)(rand() % 8 - 2) * 0.12f * ai.aggressiveness;
         ai.marketShare = std::max(1.f, ai.marketShare + growth);
+        ai.marketShare = std::min(ai.marketShare, 35.f);
     }
-    float repGrowth    = gs.stats.reputation * 0.01f;
-    float clientGrowth = (float)gs.stats.clientsAcquired * 0.05f;
+    float repGrowth    = gs.stats.reputation * 0.012f;
+    float clientGrowth = (float)gs.stats.clientsAcquired * 0.06f;
     gs.playerMarketShare = std::clamp(
-        gs.playerMarketShare + repGrowth + clientGrowth * 0.1f, 0.f, 100.f);
+        gs.playerMarketShare + repGrowth + clientGrowth * 0.08f, 0.f, 100.f);
 }
 
 void Simulation::AdvanceMonth(GameState& gs) {
@@ -113,7 +96,7 @@ void Simulation::AdvanceMonth(GameState& gs) {
     if (gs.month > 12) { gs.month = 1; gs.year++; }
     gs.stats.monthsPlayed++;
 
-    // Decay events
+    // Decay and remove expired events
     for (auto& ev : gs.activeEvents) {
         ev.monthsLeft--;
         if (ev.monthsLeft <= 0) ev.active = false;
@@ -123,7 +106,7 @@ void Simulation::AdvanceMonth(GameState& gs) {
             [](const NewsEvent& e){ return !e.active; }),
         gs.activeEvents.end());
 
-    // Rebuild channel modifiers
+    // Rebuild channel modifiers from events
     gs.channelModifiers.clear();
     for (int i = 0; i < 6; i++)
         gs.channelModifiers[(ChannelType)i] = 1.0f;
@@ -134,13 +117,6 @@ void Simulation::AdvanceMonth(GameState& gs) {
         gs.channelModifiers[ChannelType::Influencer] *= ev.influencerMod;
         gs.channelModifiers[ChannelType::PR]         *= ev.prMod;
         gs.channelModifiers[ChannelType::PaidSearch] *= ev.paidMod;
-        // Budget impact notification
-        if (ev.budgetImpact != 0.f && ev.monthsLeft == ev.durationMonths - 1) {
-            char msg[128];
-            snprintf(msg, 128, "[Event] %s: $%.0f budget impact",
-                ev.title.c_str(), ev.budgetImpact);
-            Newsfeed::PushNews(msg, 1.f, 0.8f, 0.2f);
-        }
         gs.budget += ev.budgetImpact;
     }
 
@@ -153,12 +129,16 @@ void Simulation::AdvanceMonth(GameState& gs) {
             gs.stats.totalRevenue += c.agencyFee;
         }
 
-    // Staff salaries
+    // Staff salaries (base 2800 + 9% growth per 3 staff over 3)
     gs.monthlyExpenses = 0.f;
+    int staffCount = (int)gs.staff.size();
+    float overhead = staffCount > 3 ? (staffCount - 3) * 280.f : 0.f;
     for (auto& s : gs.staff) {
         gs.monthlyExpenses += s.salary;
         s.monthsHired++;
     }
+    gs.monthlyExpenses += overhead; // rent + overhead
+    if (staffCount == 0) gs.monthlyExpenses += 800.f; // base rent even with no staff
     gs.budget += gs.monthlyRevenue - gs.monthlyExpenses;
 
     // Update clients
@@ -168,25 +148,18 @@ void Simulation::AdvanceMonth(GameState& gs) {
     // AI
     ProcessAICompetitors(gs);
 
-    // Best month
+    // Update best month
     if (gs.monthlyRevenue > gs.stats.bestMonthRevenue)
         gs.stats.bestMonthRevenue = gs.monthlyRevenue;
 
     // Reputation
-    float repDelta = (gs.monthlyRevenue > 0 ? 1.f : -1.f) * 0.3f;
+    float repDelta = gs.monthlyRevenue > gs.monthlyExpenses ? 1.2f : -1.f;
     gs.stats.reputation = std::clamp(gs.stats.reputation + repDelta, 0.f, 100.f);
 
-    // Monthly summary newsfeed
-    char summary[128];
-    float profit = gs.monthlyRevenue - gs.monthlyExpenses;
-    snprintf(summary, 128, "Month %d/%d  Revenue: $%.0f  Expenses: $%.0f  Balance: %+.0f",
-        gs.month, gs.year, gs.monthlyRevenue, gs.monthlyExpenses, profit);
-    Newsfeed::PushNews(summary,
-        profit >= 0 ? 0.4f : 1.f,
-        profit >= 0 ? 1.f  : 0.4f,
-        0.4f);
-
-    // Win / lose
-    if (gs.budget < -50000.f)          gs.gameOver = true;
-    if (gs.playerMarketShare >= 35.f)  gs.victory  = true;
+    // Soft loan protection: don't instantly bankrupt at 0
+    if (gs.budget < 0 && gs.budget > -50000.f) {
+        // still alive — just in the red
+    }
+    if (gs.budget <= -50000.f) gs.gameOver = true;
+    if (gs.playerMarketShare >= 35.f) gs.victory = true;
 }

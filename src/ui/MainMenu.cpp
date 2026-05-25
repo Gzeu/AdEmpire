@@ -1,89 +1,95 @@
 #include "MainMenu.h"
-#include "imgui.h"
+#include "UIStyle.h"
+#include "../core/Difficulty.h"
 #include "../systems/AICompetitor.h"
 #include "../systems/EventSystem.h"
-#include "../systems/AchievementsSystem.h"
+#include "imgui.h"
 #include <cstring>
-#include <vector>
 
 char MainMenu::s_agencyNameBuf[64] = "My Ad Agency";
 bool MainMenu::s_showMenu = true;
-
-static std::vector<Client> BuildAllClients() {
-    return {
-        {1,  "TastyBite Foods",        ClientIndustry::Food,      3000,  70, 6,  false, true,  {}, 0},
-        {2,  "UrbanThread Co",          ClientIndustry::Fashion,   4500,  70, 6,  false, true,  {}, 0},
-        {3,  "SparkTech Ltd",           ClientIndustry::Tech,      8000,  70, 12, false, true,  {}, 0},
-        {4,  "WealthWise",              ClientIndustry::Finance,   12000, 70, 12, false, true,  {}, 0},
-        {5,  "VitalHealth Clinic",      ClientIndustry::Health,    5000,  70, 6,  false, true,  {}, 0},
-        {6,  "EduPath Academy",         ClientIndustry::Education, 3500,  70, 6,  false, true,  {}, 0},
-        {7,  "GreenGrove Organic",      ClientIndustry::Food,      2500,  70, 6,  false, true,  {}, 0},
-        {8,  "LuxeLook Cosmetics",      ClientIndustry::Fashion,   7000,  70, 9,  false, true,  {}, 0},
-        {9,  "CloudStack Inc",          ClientIndustry::Tech,      15000, 70, 12, false, true,  {}, 0},
-        {10, "AutoDrive Motors",        ClientIndustry::Retail,    20000, 70, 12, false, true,  {}, 0},
-        {11, "FreshPress Juices",       ClientIndustry::Food,      1800,  70, 3,  false, true,  {}, 0},
-        {12, "PixelForge Games",        ClientIndustry::Gaming,    9000,  70, 9,  false, true,  {}, 0},
-        {13, "BlueSky Airlines",        ClientIndustry::Retail,    25000, 70, 12, false, true,  {}, 0},
-        {14, "NovaCure Pharma",         ClientIndustry::Health,    18000, 70, 12, false, true,  {}, 0},
-        {15, "ZenMind Wellness",        ClientIndustry::Health,    4000,  70, 6,  false, true,  {}, 0},
-        {16, "CryptoVault Exchange",    ClientIndustry::Finance,   30000, 70, 12, false, true,  {}, 0},
-        {17, "TrendBurst Apparel",      ClientIndustry::Fashion,   6000,  70, 6,  false, true,  {}, 0},
-        {18, "EcoNest Homes",           ClientIndustry::Retail,    8500,  70, 9,  false, true,  {}, 0},
-        {19, "BrainWave EdTech",        ClientIndustry::Education, 5500,  70, 6,  false, true,  {}, 0},
-        {20, "RoboArm Industrial",      ClientIndustry::Tech,      22000, 70, 12, false, true,  {}, 0},
-        {21, "SunRise Coffee",          ClientIndustry::Food,      3200,  70, 6,  false, true,  {}, 0},
-        {22, "DataMind Analytics",      ClientIndustry::Tech,      11000, 70, 12, false, true,  {}, 0},
-        {23, "ActiveLife Sports",       ClientIndustry::Retail,    7500,  70, 9,  false, true,  {}, 0},
-        {24, "NatureGlow Skincare",     ClientIndustry::Health,    5800,  70, 6,  false, true,  {}, 0},
-        {25, "MetaVerse Studio",        ClientIndustry::Gaming,    14000, 70, 12, false, true,  {}, 0},
-        {26, "PocketBank",              ClientIndustry::Finance,   16000, 70, 12, false, true,  {}, 0},
-        {27, "UrbanEats Delivery",      ClientIndustry::Food,      6500,  70, 6,  false, true,  {}, 0},
-        {28, "SmartHome Devices",       ClientIndustry::Tech,      9500,  70, 9,  false, true,  {}, 0},
-        {29, "LegalEase Platform",      ClientIndustry::Tech,      7200,  70, 9,  false, true,  {}, 0},
-        {30, "GlobeTravel Agency",      ClientIndustry::Retail,    13000, 70, 12, false, true,  {}, 0},
-    };
-}
+static int s_diffIndex = 1; // 0=Easy 1=Normal 2=Hard
 
 bool MainMenu::Render(GameState& gs) {
     if (!s_showMenu) return false;
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(500, 400));
+    ImGui::SetNextWindowSize(ImVec2(500, 440));
     ImGui::SetNextWindowBgAlpha(0.97f);
     ImGui::Begin("##MainMenu", nullptr,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
 
-    ImGui::SetCursorPosX(80.f);
-    ImGui::SetWindowFontScale(2.4f);
-    ImGui::TextColored(ImVec4(0.3f,0.7f,1.f,1.f), "AdEmpire");
+    // Title
+    ImGui::SetCursorPosX(90.f);
+    ImGui::SetWindowFontScale(2.6f);
+    ImGui::TextColored(UIStyle::Accent, "AdEmpire");
     ImGui::SetWindowFontScale(1.0f);
-    ImGui::TextColored(ImVec4(0.6f,0.8f,1.f,0.8f),
-        "          Marketing Tycoon Simulator");
-    ImGui::Separator(); ImGui::Spacing();
+    ImGui::TextColored(UIStyle::Muted, "       Marketing Tycoon Simulator  v0.3");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
 
-    ImGui::Text("Agency Name:");
+    // Agency name
+    ImGui::TextColored(UIStyle::Muted, "Agency Name:");
     ImGui::SetNextItemWidth(-1);
     ImGui::InputText("##agname", s_agencyNameBuf, 64);
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.5f,0.9f,0.5f,1.f), "Starting budget: $10,000");
-    ImGui::TextColored(ImVec4(0.8f,0.6f,0.2f,1.f), "Goal: Reach 35%% market share to WIN");
-    ImGui::TextColored(ImVec4(0.6f,0.6f,0.6f,1.f), "30 clients | 3 AI rivals | 20 events | 22 achievements");
-    ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    float bw = 460.f;
-    if (ImGui::Button("  >> New Game <<  ", ImVec2(bw, 48))) {
+    // Difficulty selector
+    ImGui::TextColored(UIStyle::Muted, "Difficulty:");
+    ImGui::Spacing();
+    const char* labels[] = {"  Easy  ", " Normal ", "  Hard  "};
+    for (int i = 0; i < 3; i++) {
+        if (i > 0) ImGui::SameLine(0, 6);
+        bool sel = (s_diffIndex == i);
+        ImVec4 col = sel
+            ? (i == 0 ? UIStyle::Positive : i == 1 ? UIStyle::Accent : UIStyle::Negative)
+            : ImVec4(0.25f,0.28f,0.40f,1.f);
+        ImGui::PushStyleColor(ImGuiCol_Button, col);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, col);
+        if (ImGui::Button(labels[i], ImVec2(148, 36))) s_diffIndex = i;
+        ImGui::PopStyleColor(2);
+    }
+    ImGui::Spacing();
+
+    // Show selected difficulty description
+    auto dcfg = Difficulty::Get((DifficultyLevel)s_diffIndex);
+    ImGui::TextColored(UIStyle::Muted, "%s", dcfg.description);
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // Win/lose info
+    ImGui::TextColored(UIStyle::Positive, "Win:  Reach 35%% market share");
+    ImGui::TextColored(UIStyle::Negative, "Lose: Budget drops below -$50,000");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    if (UIStyle::GreenButton("  Start Game  ", ImVec2(-1, 46))) {
         gs.agencyName = std::string(s_agencyNameBuf);
-        gs.clients    = BuildAllClients();
-        gs.nextClientId = 31;
+        gs.budget     = dcfg.startingBudget;
         AICompetitor::Init(gs);
+        // Apply difficulty aggressiveness
+        for (auto& ai : gs.competitors)
+            ai.aggressiveness *= dcfg.aiAggressiveness;
         EventSystem::Init(gs);
-        AchievementsSystem::Init();
+        gs.clients = {
+            {1,"TastyBite Foods",   ClientIndustry::Food,    3000, 70, 6,  false, true, {}, 0},
+            {2,"UrbanThread Co",    ClientIndustry::Fashion, 4500, 70, 6,  false, true, {}, 0},
+            {3,"SparkTech Ltd",     ClientIndustry::Tech,    8000, 70, 12, false, true, {}, 0},
+            {4,"WealthWise",        ClientIndustry::Finance, 12000,70, 12, false, true, {}, 0},
+            {5,"VitalHealth Clinic",ClientIndustry::Health,  5000, 70, 6,  false, true, {}, 0},
+            {6,"EduPath Academy",   ClientIndustry::Education,3500,70, 6,  false, true, {}, 0},
+            {7,"GreenGrove Organic",ClientIndustry::Food,    2500, 70, 6,  false, true, {}, 0},
+            {8,"PixelForge Games",  ClientIndustry::Gaming,  9000, 70, 12, false, true, {}, 0},
+        };
+        gs.nextClientId = 9;
         s_showMenu = false;
         return true;
     }
     ImGui::Spacing();
-    if (ImGui::Button("        Quit        ", ImVec2(bw, 36)))
-        exit(0);
+    if (ImGui::Button("     Quit     ", ImVec2(-1, 32))) exit(0);
     ImGui::End();
     return false;
 }

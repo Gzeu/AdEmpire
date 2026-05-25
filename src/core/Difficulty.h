@@ -1,26 +1,32 @@
 #pragma once
 
-enum class Difficulty { Easy, Normal, Hard };
+enum class DifficultyLevel { Easy, Normal, Hard };
 
-struct DifficultySettings {
-    float startBudget;        // starting $
-    float revenueMultiplier;  // agency fee multiplier
-    float aiAggressiveness;   // AI poach multiplier
-    float eventFrequency;     // 0-1 chance per month
-    float satisfactionDecay;  // extra monthly satisfaction drop
-    int   startClients;       // clients available at start
+struct DifficultyConfig {
+    float startingBudget;
+    float aiAggressiveness;  // multiplier on AI base aggressiveness
+    float revenueMultiplier; // global revenue modifier
+    float eventFrequency;    // 0-1 probability per month
+    float clientSatisfactionDecay; // extra decay per month
     const char* label;
     const char* description;
 };
 
-static const DifficultySettings DIFFICULTIES[] = {
-    // Easy
-    { 20000.f, 1.3f, 0.4f, 0.20f, 0.f,  6, "Easy",
-      "More starting budget, less aggressive AI, fewer events." },
-    // Normal
-    { 10000.f, 1.0f, 0.7f, 0.30f, 2.f,  6, "Normal",
-      "Balanced experience. The intended way to play." },
-    // Hard
-    { 5000.f,  0.8f, 1.0f, 0.45f, 5.f,  4, "Hard",
-      "Half the budget, ruthless AI, frequent events." },
-};
+namespace Difficulty {
+    inline DifficultyConfig Get(DifficultyLevel lvl) {
+        switch (lvl) {
+            case DifficultyLevel::Easy:
+                return {20000.f, 0.4f, 1.30f, 0.20f, 0.0f,
+                    "Easy",
+                    "$20,000 start. Forgiving economy, slow AI rivals."};
+            case DifficultyLevel::Hard:
+                return {5000.f, 1.0f, 0.80f, 0.50f, 2.0f,
+                    "Hard",
+                    "$5,000 start. Aggressive AI, frequent market events."};
+            default: // Normal
+                return {12500.f, 0.65f, 1.00f, 0.30f, 0.5f,
+                    "Normal",
+                    "$12,500 start. Balanced economy, adaptive AI rivals."};
+        }
+    }
+}
