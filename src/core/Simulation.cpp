@@ -1,4 +1,7 @@
 #include "Simulation.h"
+#include "ContractSystem.h"
+#include "CompetitorAI.h"
+#include "BudgetTracker.h"
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
@@ -8,6 +11,25 @@ static const float BASE_REACH_PER_DOLLAR[] = { 45.f, 18.f, 70.f, 28.f, 12.f, 38.
 static const float BASE_CTR[]              = { 0.028f, 0.045f, 0.022f, 0.055f, 0.012f, 0.038f };
 static const float BASE_CONV[]             = { 0.018f, 0.032f, 0.022f, 0.028f, 0.012f, 0.032f };
 static const float AGENCY_FEE_RATE        = 0.18f;  // 18% (was 15%)
+
+// ── v1.0: Tension systems (module-level singletons, Init'd on first use)
+static ContractSystem  gContracts;
+static CompetitorAI    gCompetitorAI;
+static BudgetTracker   gBudget;
+static bool            gSystemsInited = false;
+
+static void EnsureSystemsInited(const GameState& gs) {
+    if (gSystemsInited) return;
+    float diff = 1.0f;
+    // Scale competitor aggression with difficulty if Difficulty.h is available
+    gCompetitorAI.Init(diff);
+    gSystemsInited = true;
+}
+
+// Expose getters for UI panels
+ContractSystem&  Simulation::Contracts()   { return gContracts; }
+CompetitorAI&    Simulation::Competitors() { return gCompetitorAI; }
+BudgetTracker&   Simulation::Budget()      { return gBudget; }
 
 float Simulation::GetChannelMod(ChannelType ch, const GameState& gs) {
     auto it = gs.channelModifiers.find(ch);
@@ -80,7 +102,7 @@ void Simulation::UpdateClientSatisfaction(Client& cl, GameState& gs) {
 
 void Simulation::ProcessAICompetitors(GameState& gs) {
     for (auto& ai : gs.competitors) {
-        // AI grows naturally
+        // Legacy AIAgency natural drift
         float growth = (float)(rand() % 8 - 2) * 0.12f * ai.aggressiveness;
         ai.marketShare = std::max(1.f, ai.marketShare + growth);
         ai.marketShare = std::min(ai.marketShare, 35.f);
@@ -92,6 +114,8 @@ void Simulation::ProcessAICompetitors(GameState& gs) {
 }
 
 void Simulation::AdvanceMonth(GameState& gs) {
+    EnsureSystemsInited(gs);
+
     gs.month++;
     if (gs.month > 12) { gs.month = 1; gs.year++; }
     gs.stats.monthsPlayed++;
@@ -129,7 +153,7 @@ void Simulation::AdvanceMonth(GameState& gs) {
             gs.stats.totalRevenue += c.agencyFee;
         }
 
-    // Staff salaries (base 2800 + 9% growth per 3 staff over 3)
+    // Staff salaries
     gs.monthlyExpenses = 0.f;
     int staffCount = (int)gs.staff.size();
     float overhead = staffCount > 3 ? (staffCount - 3) * 280.f : 0.f;
@@ -137,16 +161,35 @@ void Simulation::AdvanceMonth(GameState& gs) {
         gs.monthlyExpenses += s.salary;
         s.monthsHired++;
     }
-    gs.monthlyExpenses += overhead; // rent + overhead
-    if (staffCount == 0) gs.monthlyExpenses += 800.f; // base rent even with no staff
+    gs.monthlyExpenses += overhead;
+    if (staffCount == 0) gs.monthlyExpenses += 800.f;
     gs.budget += gs.monthlyRevenue - gs.monthlyExpenses;
 
     // Update clients
     for (auto& cl : gs.clients)
         if (cl.active) UpdateClientSatisfaction(cl, gs);
 
-    // AI
+    // Legacy AI drift
     ProcessAICompetitors(gs);
+
+    // ── v1.0 P1: ContractSystem tick
+    {
+        gContracts.GenerateOffer(gs);
+        std::string t = gContracts.Tick(gs, gs.monthlyRevenue);
+        if (!t.empty()) gs.pendingToasts.push_back(t);
+    }
+
+    // ── v1.0 P2: CompetitorAI tick
+    {
+        std::string t = gCompetitorAI.Tick(gs);
+        if (!t.empty()) gs.pendingToasts.push_back(t);
+    }
+
+    // ── v1.0 P3: BudgetTracker tick
+    {
+        std::string t = gBudget.Tick(gs);
+        if (!t.empty()) gs.pendingToasts.push_back(t);
+    }
 
     // Update best month
     if (gs.monthlyRevenue > gs.stats.bestMonthRevenue)
@@ -156,10 +199,7 @@ void Simulation::AdvanceMonth(GameState& gs) {
     float repDelta = gs.monthlyRevenue > gs.monthlyExpenses ? 1.2f : -1.f;
     gs.stats.reputation = std::clamp(gs.stats.reputation + repDelta, 0.f, 100.f);
 
-    // Soft loan protection: don't instantly bankrupt at 0
-    if (gs.budget < 0 && gs.budget > -50000.f) {
-        // still alive — just in the red
-    }
+    // Soft loan protection
     if (gs.budget <= -50000.f) gs.gameOver = true;
     if (gs.playerMarketShare >= 35.f) gs.victory = true;
 }

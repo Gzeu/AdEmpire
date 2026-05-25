@@ -107,7 +107,7 @@ struct StaffMember {
     int         level = 0;
 };
 
-// ─── AI Competitor ────────────────────────────────────────────────────────────────────────
+// ─── AI Competitor (legacy stub kept for save compat) ─────────────────────────────────
 struct AIAgency {
     std::string name;
     float       marketShare;
@@ -234,6 +234,12 @@ struct SaveSlotMeta {
 // ─── Achievement (forward declaration) ──────────────────────────────────────────────────────
 struct Achievement;
 
+// ─── v1.0: Contract Offer (forward declaration) ─────────────────────────────────────────────
+struct ContractOffer;
+
+// ─── v1.0: CashflowSnapshot (forward declaration) ───────────────────────────────────────────
+struct CashflowSnapshot;
+
 // ─── Main GameState ────────────────────────────────────────────────────────────────────────
 struct GameState {
     // Agency info
@@ -248,7 +254,7 @@ struct GameState {
     std::vector<Client>         clients;
     std::vector<Campaign>       campaigns;
     std::vector<StaffMember>    staff;
-    std::vector<AIAgency>       competitors;
+    std::vector<AIAgency>       competitors;      // legacy
     std::vector<NewsEvent>      activeEvents;
     std::vector<QuarterlyGoal>  quarterlyGoals;
     std::vector<Specialization> specializations;
@@ -270,7 +276,6 @@ struct GameState {
 
     // ── v1.0: Real-market revenue multiplier (set by MarketEventBridge each month)
     // Range: 0.3 (extreme bear/panic) – 2.0 (bull+euphoria)
-    // Default 1.0 = neutral market, no modification
     float revenueMultiplier = 1.0f;
 
     // Auto-increment IDs
@@ -285,6 +290,9 @@ struct GameState {
     // ── v0.9: Event Popup gate
     bool        pendingEventPopup = false;
     GameEvent   currentEvent;
+
+    // ── v1.0: Pending toasts from systems (shown by Dashboard next frame)
+    std::vector<std::string> pendingToasts;
 
     // ── UI flags
     bool showDashboard       = true;
@@ -303,6 +311,7 @@ struct GameState {
     bool showLeaderboard     = false;
     bool showSettings        = false;
     bool showStats           = false;
+    bool showContracts       = false;   // v1.0 NEW
     bool gameOver            = false;
     bool victory             = false;
 };
