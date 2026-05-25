@@ -11,6 +11,6 @@ struct NewsEntry {
 class Newsfeed {
 public:
     static void Render(GameState& gs);
-    static void PushNews(const std::string& text, float r=1, float g=1, float b=1);
+    static void PushNews(const std::string& text, float r = 1.f, float g = 1.f, float b = 1.f);
     static std::vector<NewsEntry> s_entries;
 };

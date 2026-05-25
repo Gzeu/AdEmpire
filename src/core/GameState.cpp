@@ -1,2 +1,2 @@
 #include "GameState.h"
-// GameState is header-only data; methods will go here if needed.
+// GameState is header-only data; no runtime methods needed.

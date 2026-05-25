@@ -3,8 +3,8 @@
 
 class Simulation {
 public:
-    static void AdvanceMonth(GameState& gs);
-    static void ProcessCampaign(Campaign& c, GameState& gs);
+    static void  AdvanceMonth(GameState& gs);
+    static void  ProcessCampaign(Campaign& c, GameState& gs);
     static float CalcReach(const Campaign& c, const GameState& gs);
     static float CalcCTR(const Campaign& c, const GameState& gs);
     static float CalcConversionRate(const Campaign& c, const GameState& gs);

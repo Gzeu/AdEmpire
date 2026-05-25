@@ -14,7 +14,6 @@ namespace Theme {
         s.FramePadding      = ImVec2(10, 6);
         s.ItemSpacing       = ImVec2(10, 6);
         s.WindowPadding     = ImVec2(14, 12);
-
         auto* c = s.Colors;
         c[ImGuiCol_WindowBg]        = ImVec4(0.07f, 0.08f, 0.12f, 0.97f);
         c[ImGuiCol_ChildBg]         = ImVec4(0.04f, 0.05f, 0.09f, 0.90f);
