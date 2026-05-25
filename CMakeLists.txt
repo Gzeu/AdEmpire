@@ -4,9 +4,20 @@ project(AdEmpire VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ── Auto-download nlohmann/json if missing ──────────────────────────────────
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/json.hpp")
+    message(STATUS "[AdEmpire] Downloading nlohmann/json...")
+    file(DOWNLOAD
+        https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp
+        ${CMAKE_SOURCE_DIR}/lib/json.hpp
+        SHOW_PROGRESS
+    )
+endif()
+
 find_package(OpenGL REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 
+# ── ImGui sources ────────────────────────────────────────────────────────────
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/lib/imgui)
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
@@ -18,18 +29,17 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# ── Game sources ─────────────────────────────────────────────────────────────
 file(GLOB_RECURSE GAME_SOURCES
     src/*.cpp
     src/**/*.cpp
 )
 
-add_executable(AdEmpire
-    ${GAME_SOURCES}
-    ${IMGUI_SOURCES}
-)
+add_executable(AdEmpire ${GAME_SOURCES} ${IMGUI_SOURCES})
 
 target_include_directories(AdEmpire PRIVATE
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/lib
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
 )
@@ -39,12 +49,6 @@ target_link_libraries(AdEmpire PRIVATE
     glfw
     ${CMAKE_DL_LIBS}
 )
-
-if(MSVC)
-    target_compile_options(AdEmpire PRIVATE /W3)
-else()
-    target_compile_options(AdEmpire PRIVATE -Wall -Wextra -Wno-unused-parameter)
-endif()
 
 add_custom_command(TARGET AdEmpire POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

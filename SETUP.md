@@ -19,7 +19,15 @@ sudo apt update
 sudo apt install cmake build-essential libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev
 ```
 
-## 3. Build
+## 3. Get nlohmann/json (auto-downloaded by CMake, or manually)
+
+```bash
+curl -L https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp -o lib/json.hpp
+```
+
+> CMake will auto-download this if missing during configure step.
+
+## 4. Build
 
 ```bash
 mkdir build && cd build
@@ -27,51 +35,55 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 ```
 
-## 4. Run
+## 5. Run
 
 ```bash
 ./AdEmpire
-```
-
-## Troubleshooting
-
-**GLFW not found:**
-```bash
-sudo apt install libglfw3-dev
-# or build from source: https://www.glfw.org/download.html
-```
-
-**OpenGL not found:**
-```bash
-sudo apt install libgl1-mesa-dev
-```
-
-**Submodule empty (no imgui files in lib/imgui):**
-```bash
-git submodule update --init --recursive
 ```
 
 ## Project Layout
 
 ```
 src/
-├── main.cpp           ← entry point, GLFW + ImGui init + game loop
+├── main.cpp              ← entry point + game loop
 ├── core/
-│   ├── GameState.h    ← all data structures
-│   ├── GameState.cpp
-│   └── Simulation.cpp ← monthly simulation math
+│   ├── GameState.h       ← all data structs (+ showAchievements flag)
+│   └── Simulation.cpp    ← monthly math + Newsfeed auto-push
 ├── systems/
-│   ├── CampaignEngine ← campaign creation + ROI estimation
-│   ├── AICompetitor   ← rival agency logic
-│   ├── EventSystem    ← 20 market events
-│   └── SaveSystem     ← JSON save/load
+│   ├── CampaignEngine
+│   ├── AICompetitor
+│   ├── EventSystem
+│   ├── AchievementsSystem ← NEW: 22 achievements
+│   └── SaveSystem        ← FIXED: full JSON save/load
 └── ui/
-    ├── Theme.h        ← dark blue marketing theme
-    ├── MainMenu       ← start screen
-    ├── Dashboard      ← KPIs + revenue chart
-    ├── CampaignEditor ← create + view campaigns
-    ├── ClientManager  ← pitch + manage clients
-    ├── MarketMap      ← share visualization
-    ├── Newsfeed       ← events log
-    └── StaffPanel     ← hire + manage team
+    ├── Theme.h
+    ├── MainMenu          ← FIXED: all 30 clients
+    ├── Dashboard
+    ├── CampaignEditor
+    ├── ClientManager     ← FIXED: #include <algorithm>
+    ├── MarketMap
+    ├── Newsfeed          ← FIXED: auto-receives events
+    ├── StaffPanel
+    ├── AchievementsPanel ← NEW: panel + popup overlay
+    └── SettingsPanel     ← NEW: display/audio/gameplay/save
+lib/
+├── imgui/    ← git submodule
+└── json.hpp  ← nlohmann/json (auto-downloaded by CMake)
+```
+
+## Troubleshooting
+
+**json.hpp not found:**
+```bash
+curl -L https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp -o lib/json.hpp
+```
+
+**GLFW not found:**
+```bash
+sudo apt install libglfw3-dev
+```
+
+**Submodule empty:**
+```bash
+git submodule update --init --recursive
 ```

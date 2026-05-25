@@ -1,8 +1,8 @@
 #include "ClientManager.h"
 #include "imgui.h"
 #include <algorithm>
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 
 void ClientManager::Render(GameState& gs) {
     if (!gs.showClients) return;
@@ -12,64 +12,67 @@ void ClientManager::Render(GameState& gs) {
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
     if (ImGui::BeginTabBar("##clienttabs")) {
+        // ── My Clients ──────────────────────────────────────────────────────
         if (ImGui::BeginTabItem("My Clients")) {
-            bool anyActive = false;
+            int activeCount = 0;
+            for (auto& cl : gs.clients) if (cl.active) activeCount++;
+            ImGui::Text("Active clients: %d", activeCount);
+            ImGui::Separator();
+
             for (auto& cl : gs.clients) {
                 if (!cl.active) continue;
-                anyActive = true;
                 ImGui::PushID(cl.id);
                 ImGui::Text("%s", cl.name.c_str());
                 ImGui::SameLine(200);
-                ImGui::TextColored(ImVec4(0.7f,0.7f,1.f,1.f), "%s",
-                    IndustryNames[static_cast<int>(cl.industry)]);
+                ImGui::TextColored(ImVec4(0.7f,0.7f,1.f,1.f),
+                    "%s", IndustryNames[(int)cl.industry]);
                 ImGui::SameLine(370);
                 ImGui::Text("Budget: $%.0f/mo", cl.budget);
-                ImVec4 satCol =
-                    cl.satisfaction > 70.f ? ImVec4(0.3f,1.f,0.4f,1.f) :
-                    cl.satisfaction > 40.f ? ImVec4(1.f,0.8f,0.2f,1.f) :
-                                             ImVec4(1.f,0.3f,0.3f,1.f);
+
+                float sat = cl.satisfaction;
+                ImVec4 satCol = sat > 70.f ? ImVec4(0.3f,1.f,0.4f,1.f)
+                              : sat > 40.f ? ImVec4(1.f,0.8f,0.2f,1.f)
+                              :              ImVec4(1.f,0.3f,0.3f,1.f);
                 char satLabel[32];
-                snprintf(satLabel, sizeof(satLabel), "Sat: %.0f%%", cl.satisfaction);
-                ImGui::ProgressBar(cl.satisfaction / 100.f, ImVec2(180,14), satLabel);
+                snprintf(satLabel, 32, "Sat: %.0f%%", sat);
+                ImGui::ProgressBar(sat / 100.f, ImVec2(180, 14), satLabel);
                 ImGui::SameLine();
                 ImGui::TextColored(satCol, "Contract: %dmo left", cl.contractMonths);
                 ImGui::Separator();
                 ImGui::PopID();
             }
-            if (!anyActive)
-                ImGui::TextDisabled("No active clients. Pitch some from Available tab!");
             ImGui::EndTabItem();
         }
+
+        // ── Available Clients (Pitch) ────────────────────────────────────────
         if (ImGui::BeginTabItem("Available (Pitch)")) {
             ImGui::TextColored(ImVec4(0.8f,0.8f,0.3f,1.f),
-                "Win chance scales with your agency reputation.");
+                "Win clients by pitching. Success chance depends on your reputation.");
             ImGui::Spacing();
-            bool anyAvail = false;
+
             for (auto& cl : gs.clients) {
                 if (!cl.available || cl.active) continue;
-                anyAvail = true;
                 ImGui::PushID(cl.id);
                 ImGui::Text("%s  |  %s  |  Budget: $%.0f/mo",
                     cl.name.c_str(),
-                    IndustryNames[static_cast<int>(cl.industry)],
+                    IndustryNames[(int)cl.industry],
                     cl.budget);
                 ImGui::SameLine(500);
-                float winChance = std::min(gs.stats.reputation / 100.f * 0.8f + 0.2f, 0.95f);
-                ImGui::TextColored(ImVec4(0.4f,1.f,0.6f,1.f), "Win: %.0f%%", winChance * 100.f);
+                float winChance = std::min(gs.stats.reputation / 100.f * 0.8f + 0.20f, 0.95f);
+                ImGui::TextColored(ImVec4(0.4f,1.f,0.6f,1.f),
+                    "Win: %.0f%%", winChance * 100.f);
                 ImGui::SameLine();
                 if (ImGui::Button("Pitch!")) {
-                    if (static_cast<float>(rand() % 100) / 100.f < winChance) {
+                    if ((float)(rand() % 100) / 100.f < winChance) {
                         cl.active    = true;
                         cl.available = false;
                         gs.stats.clientsAcquired++;
-                        gs.playerMarketShare += 1.5f;
+                        gs.playerMarketShare = std::min(gs.playerMarketShare + 1.5f, 100.f);
                     }
                 }
                 ImGui::Separator();
                 ImGui::PopID();
             }
-            if (!anyAvail)
-                ImGui::TextDisabled("No clients available to pitch right now.");
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
