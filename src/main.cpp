@@ -20,6 +20,10 @@
 #include "systems/StaffLeveling.h"       // v0.5
 #include "systems/SeasonalEvents.h"      // v0.5
 
+// ── v0.8 Systems ─────────────────────────────────────────────────────────────
+#include "audio/AudioSystem.h"            // v0.8: OpenAL procedural audio
+#include "network/LeaderboardClient.h"    // v0.8: REST global leaderboard
+
 // ── UI ──────────────────────────────────────────────────────────────────────
 #include "ui/Theme.h"
 #include "ui/UIStyle.h"
@@ -34,6 +38,8 @@
 #include "ui/AchievementsPanel.h"        // v0.5
 #include "ui/TemplatesPanel.h"           // v0.5
 #include "ui/SaveSlotsPanel.h"           // v0.5
+#include "ui/LeaderboardPanel.h"         // v0.8
+#include "ui/SettingsPanel.h"            // v0.8
 
 // ── NegotiationPanel / GoalsPanel / SpecializationPanel (v0.2) ───────────────
 #include "ui/NegotiationPanel.h"
@@ -57,13 +63,13 @@ void RenderNavbar() {
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    // Helper: open one panel, close all others
     auto openOnly = [&](bool& target) {
         bool* all[] = {
             &gs.showCampaigns, &gs.showClients, &gs.showStaff,
             &gs.showMarketMap, &gs.showNewsfeed, &gs.showReport,
             &gs.showAchievements, &gs.showGoals, &gs.showSpecializations,
-            &gs.showNegotiation, &gs.showTemplates, &gs.showSaveSlots
+            &gs.showNegotiation, &gs.showTemplates, &gs.showSaveSlots,
+            &gs.showLeaderboard, &gs.showSettings                          // v0.8
         };
         for (auto* p : all) *p = false;
         target = true;
@@ -77,7 +83,7 @@ void RenderNavbar() {
     ImGui::SameLine();
     if (ImGui::Button("   Staff    "))  openOnly(gs.showStaff);
     ImGui::SameLine();
-    if (ImGui::Button(" Templates  "))  openOnly(gs.showTemplates);   // v0.5
+    if (ImGui::Button(" Templates  "))  openOnly(gs.showTemplates);
     ImGui::SameLine();
     if (ImGui::Button(" Market Map "))  openOnly(gs.showMarketMap);
     ImGui::SameLine();
@@ -85,14 +91,17 @@ void RenderNavbar() {
     ImGui::SameLine();
     if (ImGui::Button(" Specials   "))  openOnly(gs.showSpecializations);
     ImGui::SameLine();
-    if (ImGui::Button(" Achievmts  "))  openOnly(gs.showAchievements); // v0.5
+    if (ImGui::Button(" Achievmts  "))  openOnly(gs.showAchievements);
     ImGui::SameLine();
     if (ImGui::Button(" Newsfeed   "))  openOnly(gs.showNewsfeed);
     ImGui::SameLine();
     if (ImGui::Button(" Report     "))  openOnly(gs.showReport);
+    ImGui::SameLine();
+    if (ImGui::Button(" 🏆 Board   "))  openOnly(gs.showLeaderboard);     // v0.8
+    ImGui::SameLine();
+    if (ImGui::Button(" ⚙ Settings "))  openOnly(gs.showSettings);       // v0.8
     ImGui::SameLine(0, 20);
 
-    // Live budget strip
     ImVec4 budgetCol = gs.budget > 3000 ? UIStyle::Positive
                      : gs.budget > 0   ? UIStyle::Warning
                                        : UIStyle::Negative;
@@ -103,9 +112,15 @@ void RenderNavbar() {
     ImGui::TextColored(UIStyle::Gold, "%.1f%%", gs.playerMarketShare);
     ImGui::SameLine(0, 20);
 
-    if (UIStyle::GreenButton(" >> Next Month ")) pendingNextMonth = true;
+    if (UIStyle::GreenButton(" >> Next Month ")) {
+        pendingNextMonth = true;
+        SOUND(ButtonClick);   // v0.8: audio feedback
+    }
     ImGui::SameLine();
-    if (ImGui::Button(" 💾 Save "))  openOnly(gs.showSaveSlots);     // v0.5: opens slot panel
+    if (ImGui::Button(" 💾 Save ")) {
+        openOnly(gs.showSaveSlots);
+        SOUND(ButtonClick);   // v0.8
+    }
     ImGui::End();
 }
 
@@ -113,34 +128,33 @@ void RenderNavbar() {
 void RenderGame(float dt) {
     RenderNavbar();
 
-    // Always-visible sidebar
     Dashboard::Render(gs);
 
-    // Main panel (mutually exclusive)
     CampaignEditor::Render(gs);
     ClientManager::Render(gs);
     StaffPanel::Render(gs);
-    TemplatesPanel::Render(gs);        // v0.5
+    TemplatesPanel::Render(gs);
     MarketMap::Render(gs);
     GoalsPanel::Render(gs);
     SpecializationPanel::Render(gs);
-    AchievementsPanel::Render(gs);     // v0.5
+    AchievementsPanel::Render(gs);
     Newsfeed::Render(gs);
     ReportPanel::Render(gs);
-    SaveSlotsPanel::Render(gs);        // v0.5
+    SaveSlotsPanel::Render(gs);
+    LeaderboardPanel::Render(gs);          // v0.8
+    SettingsPanel::Render(gs);             // v0.8
 
-    // Overlay panels (triggered contextually)
     NegotiationPanel::Render(gs);
 
-    // Toasts always on top
     ToastSystem::Get().Update(dt);
     ToastSystem::Get().Render();
+    AudioSystem::Get().Tick();             // v0.8: cleanup finished sources
 
     // ── Win overlay ────────────────────────────────────────────────────────
     if (gs.victory) {
         ImVec2 c = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(440, 240));
+        ImGui::SetNextWindowSize(ImVec2(440, 260));
         ImGui::Begin("VICTORY!", nullptr, ImGuiWindowFlags_NoDecoration);
         ImGui::SetWindowFontScale(2.2f);
         ImGui::TextColored(UIStyle::Positive, "  VICTORY!");
@@ -148,7 +162,10 @@ void RenderGame(float dt) {
         ImGui::Text("You reached 35%% market share!");
         ImGui::Text("Total Revenue:  $%.0f", gs.stats.totalRevenue);
         ImGui::Text("Months played:  %d",    gs.stats.monthsPlayed);
-        if (UIStyle::GreenButton("Play Again", ImVec2(-1, 40)))
+        ImGui::Spacing();
+        if (UIStyle::GreenButton("Submit to Leaderboard", ImVec2(-1, 36)))
+            openOnly_v(gs.showLeaderboard);  // opens Submit tab
+        if (UIStyle::GreenButton("Play Again", ImVec2(-1, 36)))
             { gs = GameState(); gameStarted = false; MainMenu::s_showMenu = true; }
         ImGui::End();
     }
@@ -181,7 +198,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(
-        1280, 720, "AdEmpire v0.6 \u2014 Marketing Tycoon", nullptr, nullptr);
+        1280, 720, "AdEmpire v0.8 — Marketing Tycoon", nullptr, nullptr);
     if (!window) return -1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -194,6 +211,9 @@ int main() {
     ImGui_ImplGLFW_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
     Theme::ApplyDarkMarketing();
+
+    // ── v0.8: init audio ──────────────────────────────────────────────────
+    AudioSystem::Get().Init();
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -208,38 +228,43 @@ int main() {
         if (!gameStarted) {
             if (MainMenu::Render(gs)) {
                 gameStarted = true;
-                // ── v0.5 system init ──────────────────────────────────────
                 AchievementSystem::Init(gs);
                 TOAST_SUCCESS("Agency founded! Good luck.");
+                SOUND(Notification);  // v0.8: startup sound
             }
         } else {
             if (pendingNextMonth) {
-                // ── Monthly tick order ─────────────────────────────────────
-                SeasonalEvents::Apply(gs);               // v0.5: seasonal mods
+                SeasonalEvents::Apply(gs);
                 EventSystem::TryTriggerEvent(gs);
                 AICompetitor::ProcessTurn(gs);
-                StaffLeveling::ProcessMonth(gs);         // v0.5: skill growth + promotions
-                AchievementSystem::Check(gs);            // v0.5: achievement eval
-                ReportPanel::GenerateReport(gs);         // snapshot before advance
+                StaffLeveling::ProcessMonth(gs);
+                AchievementSystem::Check(gs);
+                ReportPanel::GenerateReport(gs);
                 Simulation::AdvanceMonth(gs);
 
-                // Auto-open report
                 gs.showReport = true;
                 for (bool* p : { &gs.showCampaigns, &gs.showClients, &gs.showStaff,
                                  &gs.showMarketMap, &gs.showNewsfeed,
                                  &gs.showAchievements, &gs.showGoals,
                                  &gs.showSpecializations, &gs.showTemplates,
-                                 &gs.showSaveSlots })
+                                 &gs.showSaveSlots, &gs.showLeaderboard,
+                                 &gs.showSettings })
                     *p = false;
 
                 pendingNextMonth = false;
 
-                // Toast profit summary
                 float profit = gs.monthlyRevenue - gs.monthlyExpenses;
-                if (profit >= 0)
+                if (profit >= 0) {
                     TOAST_SUCCESS("Profitable month! +$" + std::to_string((int)profit));
-                else
+                    SOUND(MonthAdvanced);          // v0.8
+                } else {
                     TOAST_WARN("Monthly loss: -$" + std::to_string((int)(-profit)));
+                    SOUND(Notification);           // v0.8
+                }
+
+                // v0.8: trigger victory/gameover sounds
+                if (gs.victory)  SOUND(Victory);
+                if (gs.gameOver) SOUND(GameOver);
             }
             RenderGame(dt);
         }
@@ -254,6 +279,7 @@ int main() {
         glfwSwapBuffers(window);
     }
 
+    AudioSystem::Get().Shutdown();  // v0.8: clean OpenAL
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGLFW_Shutdown();
     ImGui::DestroyContext();

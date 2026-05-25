@@ -1,0 +1,17 @@
+{
+  "name": "adempire-leaderboard-server",
+  "version": "0.8.0",
+  "description": "AdEmpire global leaderboard REST API",
+  "main": "leaderboard-server.js",
+  "scripts": {
+    "start": "node leaderboard-server.js",
+    "dev": "node --watch leaderboard-server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
