@@ -19,16 +19,13 @@
 
 ## 📸 Screenshots
 
-> 🎮 *First playtest screenshots coming soon — compile locally and send your best moment!*
+![Dashboard](docs/screenshots/dashboard.png)
 
-| Dashboard | Negotiation | Victory Screen |
-|:---------:|:-----------:|:--------------:|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Negotiation](docs/screenshots/negotiation.png) | ![Victory](docs/screenshots/victory.png) |
+| Negotiation | Victory Screen |
+|:-----------:|:--------------:|
+| *coming soon* | *coming soon* |
 
-<!-- To add your screenshot:
-  1. Compile: cmake .. && make -j$(nproc) && ./AdEmpire
-  2. Take a screenshot and save to docs/screenshots/
-  3. Open a PR or push directly to main -->
+<!-- Add more screenshots: compile → play → screenshot → save to docs/screenshots/ → push -->
 
 ---
 
@@ -55,7 +52,7 @@ Every month you:
 
 ## ✅ v0.9 — Feature Complete
 
-Latest commit: [3df56ba6](https://github.com/Gzeu/AdEmpire/commit/3df56ba6e94ea265b5f64e1ac043d79da9f87f50)
+Latest commit: [acc20bc5](https://github.com/Gzeu/AdEmpire/commit/acc20bc5e0151e02d5b4de714360be016cfe539d)
 
 | Category | Files | Status |
 |---|---:|---|
@@ -240,7 +237,8 @@ AdEmpire/
 ├── docs/
 │   ├── landing/
 │   │   └── index.html               # Presentation website
-│   └── screenshots/                 # Add gameplay screenshots here
+│   └── screenshots/
+│       └── dashboard.png            # ✅ live
 ├── .github/
 │   ├── workflows/
 │   │   └── release.yml              # Auto-release Linux/Windows/macOS
@@ -377,6 +375,8 @@ Modifiers stack: market events × seasonal × industry bonus × specialization �
 | Field name mismatches | Fixed Achievement name → title, suggestedBudget → budgetSuggested |
 | API mismatches | Simplified StatsPanel, fixed TemplatesPanel field order |
 | Header-only conflicts | Removed duplicate LeaderboardPanel.cpp, SettingsPanel.cpp |
+| AchievementSystem lambda captures | Fixed in [acc20bc5](https://github.com/Gzeu/AdEmpire/commit/acc20bc5e0151e02d5b4de714360be016cfe539d) |
+| MainMenu include order | Fixed in [acc20bc5](https://github.com/Gzeu/AdEmpire/commit/acc20bc5e0151e02d5b4de714360be016cfe539d) |
 
 > ✅ Zero known compilation blockers on GCC 11+ / Clang 14+ / MSVC 19.38+ / Ubuntu 22.04+
 
@@ -391,7 +391,8 @@ Modifiers stack: market events × seasonal × industry bonus × specialization �
 | v0.3–v0.6 | [aa6004fe](https://github.com/Gzeu/AdEmpire/commit/aa6004fef62d05827fdfef34499a98f3adc84f62) | Toasts, Reports, Achievements, Templates, Save Slots, Staff Leveling |
 | v0.7 | [20898e67](https://github.com/Gzeu/AdEmpire/commit/20898e673d189cb8aac8d5447359f70eca57da44) | StatsTracker, DifficultySystem, Leaderboard, 31 JSON events, guides |
 | v0.8 | [28bd9370](https://github.com/Gzeu/AdEmpire/commit/28bd9370ff9a33ea17e1844e327bf65318ce4ec5) | OpenAL audio (procedural WAV) + REST leaderboard (cpp-httplib) |
-| **v0.9** | [**3df56ba6**](https://github.com/Gzeu/AdEmpire/commit/3df56ba6e94ea265b5f64e1ac043d79da9f87f50) | **AgencyBranding, ChartRenderer, SplashScreen, VictoryScreen, EventPopup, Steam stub, cross-platform CMake, GitHub Actions release** |
+| v0.9 | [3df56ba6](https://github.com/Gzeu/AdEmpire/commit/3df56ba6e94ea265b5f64e1ac043d79da9f87f50) | AgencyBranding, ChartRenderer, SplashScreen, VictoryScreen, EventPopup, Steam stub |
+| **v0.9.1** | [**acc20bc5**](https://github.com/Gzeu/AdEmpire/commit/acc20bc5e0151e02d5b4de714360be016cfe539d) | **20+ compile fixes (cbf15e08), dashboard.png screenshot live, AchievementSystem + MainMenu fixes** |
 
 See [CHANGELOG.md](CHANGELOG.md) for the full detailed changelog.
 
@@ -402,7 +403,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full detailed changelog.
 | Feature | Status |
 |---|---|
 | First binary release (Linux / Windows / macOS) | 🟡 Ready — run `git tag v1.0.0 && git push origin v1.0.0` |
-| Screenshots in README | 🟡 Needs first playtest — add to `docs/screenshots/` |
+| Negotiation + Victory screenshots | 🟡 Add to `docs/screenshots/` after next playtest |
 | GitHub Pages landing page | 🟡 Built at `docs/landing/index.html` — enable in repo Settings |
 | Android / iOS port via ImGui + SDL2 | 🔵 Future |
 | Multiplayer / co-op agency mode | 🔵 Future |
