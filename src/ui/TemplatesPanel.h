@@ -1,7 +1,7 @@
 #pragma once
 #include "../core/GameState.h"
 
-class SaveSlotsPanel {
+class TemplatesPanel {
 public:
     static void Render(GameState& gs);
 };

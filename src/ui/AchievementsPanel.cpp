@@ -2,51 +2,50 @@
 #include "../systems/AchievementSystem.h"
 #include "imgui.h"
 
-void AchievementsPanel::Render(GameState& gs, bool& show) {
-    if (!show) return;
+void AchievementsPanel::Render(GameState& gs) {
+    if (!gs.showAchievements) return;
     ImGui::SetNextWindowPos(ImVec2(325, 40), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(700, 560), ImGuiCond_Always);
-    ImGui::Begin("Achievements", &show,
+    ImGui::Begin("Achievements", &gs.showAchievements,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    auto& sys = AchievementSystem::Get();
-    int unlocked = sys.CountUnlocked();
-    int total    = (int)sys.achievements.size();
+    int unlocked = AchievementSystem::UnlockedCount();
+    int total    = (int)AchievementSystem::All().size();
     char prog[32]; snprintf(prog, 32, "%d / %d", unlocked, total);
-    ImGui::Text("Progress:"); ImGui::SameLine();
+    ImGui::Text("Progress:");
+    ImGui::SameLine();
     ImGui::ProgressBar((float)unlocked / total, ImVec2(300, 18), prog);
     ImGui::Separator();
     ImGui::Spacing();
 
+    auto& all = AchievementSystem::All();
     int cols = 2;
-    if (ImGui::BeginTable("##ach", cols, ImGuiTableFlags_BordersInner | ImGuiTableFlags_PadOuterX)) {
-        for (auto& a : sys.achievements) {
+    if (ImGui::BeginTable("##ach", cols, ImGuiTableFlags_None)) {
+        for (int i = 0; i < (int)all.size(); i++) {
             ImGui::TableNextColumn();
-            ImGui::PushID(a.id);
-            ImVec4 bg = a.unlocked
-                ? ImVec4(0.1f, 0.25f, 0.1f, 0.9f)
-                : ImVec4(0.12f, 0.12f, 0.18f, 0.9f);
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, bg);
-            ImGui::BeginChild("##achcard", ImVec2(-1, 70), true);
+            auto& a = all[i];
+            ImGui::PushID(i);
+            ImGui::BeginGroup();
 
+            // Icon + title
             if (a.unlocked)
-                ImGui::TextColored(ImVec4(0.3f,1.f,0.4f,1.f), "%s  %s",
-                    a.icon.c_str(), a.title.c_str());
+                ImGui::TextColored(ImVec4(1.f,0.85f,0.1f,1.f), "%s %s", a.icon.c_str(), a.title.c_str());
             else
-                ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.f), "???  %s",
-                    a.title.c_str());
+                ImGui::TextDisabled("🔒 %s", a.title.c_str());
 
+            // Description
             if (a.unlocked) {
                 ImGui::TextWrapped("%s", a.description.c_str());
-                ImGui::TextColored(ImVec4(0.4f,0.8f,0.4f,1.f),
-                    "Unlocked month %d", a.unlockedMonth);
+                if (a.monthUnlocked >= 0)
+                    ImGui::TextColored(ImVec4(0.5f,0.9f,0.5f,1.f),
+                        "Unlocked month %d", a.monthUnlocked);
             } else {
-                ImGui::TextColored(ImVec4(0.4f,0.4f,0.4f,1.f),
-                    "%s", a.description.c_str());
+                ImGui::TextDisabled("%s", a.description.c_str());
             }
-            ImGui::EndChild();
-            ImGui::PopStyleColor();
+
+            ImGui::EndGroup();
             ImGui::PopID();
+            ImGui::Spacing();
         }
         ImGui::EndTable();
     }

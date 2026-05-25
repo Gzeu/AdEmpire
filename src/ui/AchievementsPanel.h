@@ -3,5 +3,5 @@
 
 class AchievementsPanel {
 public:
-    static void Render(GameState& gs, bool& show);
+    static void Render(GameState& gs);
 };

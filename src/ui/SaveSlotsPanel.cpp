@@ -1,52 +1,60 @@
 #include "SaveSlotsPanel.h"
 #include "../systems/SaveSlots.h"
-#include "../ui/ToastSystem.h"
 #include "imgui.h"
 #include <cstdio>
 
-int SaveSlotsPanel::activeSlot = 0;
+void SaveSlotsPanel::Render(GameState& gs) {
+    if (!gs.showSaveSlots) return;
+    ImGui::SetNextWindowPos(ImVec2(325, 40), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiCond_Always);
+    ImGui::Begin("Save / Load", &gs.showSaveSlots,
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-void SaveSlotsPanel::Render(GameState& gs, bool& show) {
-    if (!show) return;
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f,0.5f));
-    ImGui::SetNextWindowSize(ImVec2(560, 320));
-    ImGui::Begin("Save / Load", &show, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-    ImGui::Text("Select a save slot:");
+    ImGui::Text("Choose a save slot:");
     ImGui::Separator();
+    ImGui::Spacing();
 
-    auto slots = SaveSlots::GetAll();
-    for (auto& s : slots) {
-        ImGui::PushID(s.slot);
-        ImGui::BeginGroup();
-        char label[128];
-        if (s.exists)
-            snprintf(label, 128, "Slot %d: %s  |  Mo %d/%d  |  $%.0f  |  %.1f%% share",
-                s.slot, s.agencyName.c_str(), s.month, s.year, s.budget, s.marketShare);
-        else
-            snprintf(label, 128, "Slot %d: [Empty]", s.slot);
+    for (int i = 0; i < SaveSlots::SLOT_COUNT; i++) {
+        ImGui::PushID(i);
+        auto& sl = SaveSlots::s_slots[i];
 
-        bool isActive = (activeSlot == s.slot);
-        if (isActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f,0.4f,0.1f,1.f));
-        if (ImGui::Button(label, ImVec2(440, 34))) {}
-        if (isActive) ImGui::PopStyleColor();
+        // Slot header
+        char slotLabel[32];
+        snprintf(slotLabel, 32, "Slot %d", i + 1);
 
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Save")) {
-            SaveSlots::Save(gs, s.slot);
-            activeSlot = s.slot;
-            ToastSystem::Get().Push("Game saved to slot " + std::to_string(s.slot),
-                ToastType::Success);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg,
+            sl.occupied ? ImVec4(0.08f,0.12f,0.20f,1.f) : ImVec4(0.05f,0.05f,0.08f,1.f));
+        ImGui::BeginChild(slotLabel, ImVec2(-1, 90), true);
+
+        if (sl.occupied) {
+            ImGui::TextColored(ImVec4(0.3f,0.8f,1.f,1.f),
+                "🏢  %s", sl.agencyName.c_str());
+            ImGui::SameLine(260);
+            ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.f), "Saved: %s", sl.savedAt.c_str());
+            ImGui::Text("  Budget: $%.0f  |  Share: %.1f%%  |  Month %d/%d  |  %d clients",
+                sl.budget, sl.marketShare, sl.month, sl.year, sl.clients);
+            // Progress bar
+            ImGui::ProgressBar(sl.marketShare / 100.f, ImVec2(200, 10), "");
+        } else {
+            ImGui::TextDisabled("  [ Empty Slot ]");
         }
+
+        ImGui::Spacing();
+        // Buttons
+        if (ImGui::Button("Save Here", ImVec2(120, 26)))
+            SaveSlots::Save(i, gs);
         ImGui::SameLine();
-        if (s.exists && ImGui::SmallButton("Del")) {
-            SaveSlots::Delete(s.slot);
-            ToastSystem::Get().Push("Slot " + std::to_string(s.slot) + " deleted",
-                ToastType::Warning);
-        }
-        ImGui::EndGroup();
-        ImGui::Separator();
+        if (!sl.occupied) ImGui::BeginDisabled();
+        if (ImGui::Button("Load", ImVec2(80, 26)))
+            SaveSlots::Load(i, gs);
+        ImGui::SameLine();
+        if (ImGui::Button("Delete", ImVec2(80, 26)))
+            SaveSlots::Delete(i);
+        if (!sl.occupied) ImGui::EndDisabled();
+
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
         ImGui::PopID();
     }
     ImGui::End();

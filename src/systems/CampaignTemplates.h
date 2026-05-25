@@ -1,19 +1,20 @@
 #pragma once
 #include "../core/GameState.h"
-#include <string>
 #include <vector>
+#include <string>
 
 struct CampaignTemplate {
-    std::string name;
-    std::string description;
-    ChannelType channel;
-    float       budgetRatio;   // fraction of client's monthly budget
-    int         duration;
-    float       qualityBonus;  // extra quality score
+    std::string  name;
+    ChannelType  channel;
+    float        budgetSuggested;
+    int          durationMonths;
+    float        qualityBonus;      // added on top of base quality score
+    std::string  description;
+    ClientIndustry bestFor;         // industry that benefits most
 };
 
 class CampaignTemplates {
 public:
-    static std::vector<CampaignTemplate> GetAll();
-    static std::vector<CampaignTemplate> GetForIndustry(ClientIndustry ind);
+    static const std::vector<CampaignTemplate>& GetAll();
+    static std::vector<CampaignTemplate> ForIndustry(ClientIndustry ind);
 };
