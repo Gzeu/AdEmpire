@@ -1,0 +1,94 @@
+[
+  {
+    "id": "crypto_bull_run",
+    "title": "Crypto Bull Run",
+    "description": "BTC surged +8% in 24h. Consumer confidence is high — Tech and Fintech clients increase ad budgets by 20%.",
+    "type": "market",
+    "probability": 1.0,
+    "effects": {
+      "tech_client_budget_mult": 1.20,
+      "fintech_client_budget_mult": 1.25,
+      "campaign_roi_mult": 1.10
+    }
+  },
+  {
+    "id": "crypto_winter",
+    "title": "Crypto Winter",
+    "description": "BTC dropped -8% in 24h. Fintech clients freeze budgets. General ad spend drops 15%.",
+    "type": "market",
+    "probability": 1.0,
+    "effects": {
+      "fintech_client_budget_mult": 0.70,
+      "campaign_roi_mult": 0.85,
+      "new_client_chance_mult": 0.80
+    }
+  },
+  {
+    "id": "market_panic",
+    "title": "Market Panic",
+    "description": "Fear & Greed Index below 20 — Extreme Fear. All clients reduce discretionary spending. AI rivals play defensively.",
+    "type": "market",
+    "probability": 1.0,
+    "effects": {
+      "all_budget_mult": 0.75,
+      "rival_aggression": -0.30,
+      "campaign_roi_mult": 0.80
+    }
+  },
+  {
+    "id": "ai_hype_wave",
+    "title": "AI Hype Wave",
+    "description": "Hacker News flooded with AI stories. Tech clients competing for attention — premium placements sell at 30% markup.",
+    "type": "trend",
+    "probability": 1.0,
+    "effects": {
+      "tech_campaign_roi_mult": 1.30,
+      "premium_placement_mult": 1.30,
+      "new_tech_client_chance": 0.25
+    }
+  },
+  {
+    "id": "tech_sector_boom",
+    "title": "Tech Sector Boom",
+    "description": "AI hype + crypto bull run firing simultaneously. Peak conditions for tech advertising. All Tech campaigns +35% ROI.",
+    "type": "market",
+    "probability": 1.0,
+    "effects": {
+      "tech_campaign_roi_mult": 1.35,
+      "all_budget_mult": 1.10,
+      "rival_aggression": 0.20
+    }
+  },
+  {
+    "id": "ad_market_boom",
+    "title": "Ad Market Boom",
+    "description": "Global ad market health above 130%. Clients increase annual budgets. All new contracts +15% value.",
+    "type": "market",
+    "probability": 1.0,
+    "effects": {
+      "all_budget_mult": 1.15,
+      "new_contract_value_mult": 1.15
+    }
+  },
+  {
+    "id": "ad_budgets_cut",
+    "title": "Ad Budget Cuts",
+    "description": "Market health below 70%. CFOs across industries cutting marketing spend. Expect 25% fewer new leads this month.",
+    "type": "market",
+    "probability": 1.0,
+    "effects": {
+      "new_client_chance_mult": 0.75,
+      "all_budget_mult": 0.85
+    }
+  },
+  {
+    "id": "trending_topic_active",
+    "title": "Global Trending Topic",
+    "description": "A topic is dominating global attention. Campaigns targeting it get a 25% engagement bonus this month.",
+    "type": "trend",
+    "probability": 1.0,
+    "effects": {
+      "trending_campaign_roi_mult": 1.25
+    }
+  }
+]
