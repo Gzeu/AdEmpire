@@ -1,0 +1,16 @@
+[
+  {
+    "_comment": "Add your custom events here. They will be merged with the base event pool.",
+    "title": "Example Custom Event",
+    "description": "This is a moddable event. Edit this file to create your own market events.",
+    "impact": "Social +20%",
+    "socialMod": 1.2,
+    "seoMod": 1.0,
+    "emailMod": 1.0,
+    "influencerMod": 1.0,
+    "prMod": 1.0,
+    "paidMod": 1.0,
+    "budgetImpact": 0,
+    "durationMonths": 1
+  }
+]
