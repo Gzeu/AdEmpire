@@ -86,6 +86,7 @@ bool MainMenu::Render(GameState& gs) {
         };
         gs.nextClientId = 9;
         s_showMenu = false;
+        ImGui::End();
         return true;
     }
     ImGui::Spacing();

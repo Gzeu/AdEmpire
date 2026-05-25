@@ -53,7 +53,11 @@ void AchievementSystem::Init(GameState& gs) {
     gs.achievements.clear();
     for (auto& d : s_defs) {
         Achievement a;
-        a.id = std::stoi(d.id);
+        try {
+            a.id = std::stoi(d.id);
+        } catch (...) {
+            a.id = 0; // fallback if id is not a valid number
+        }
         a.title = d.name;
         a.description = d.description;
         a.category = "";
