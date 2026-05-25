@@ -55,6 +55,7 @@ public:
 
     void Stop()       { running_ = false; }
     void RefreshNow() { std::thread([this](){ FetchAll(); }).detach(); }
+    void FetchAsync() { RefreshNow(); }
 
     MarketState GetState() const {
         std::lock_guard<std::mutex> lock(mx_);
@@ -95,14 +96,14 @@ private:
         MarketState fresh = MarketState::Neutral();
 
         bool cryptoOk = CryptoFeed::Fetch(fresh);  // BTC/ETH + Fear&Greed
-        bool newsOk   = NewsFeed::Fetch(fresh);     // Bug fix #1: now wired in
-        bool trendOk  = TrendFeed::Fetch(fresh);    // HackerNews sentiment
-        bool fxOk     = FXFeed::Fetch(fresh);       // EUR/USD/RON
-        bool socialOk = SocialPulseFeed::Fetch(fresh); // Reddit + social pulse
-        bool wikiOk   = WikiTrendFeed::Fetch(fresh);   // Wikipedia trending
+        NewsFeed::Get().FetchAsync();              // Bug fix #1: now wired in
+        TrendFeed::Fetch(fresh);                   // HackerNews sentiment
+        FXFeed::Fetch(fresh);                      // EUR/USD/RON
+        SocialPulseFeed::Fetch(fresh);              // Reddit + social pulse
+        WikiTrendFeed::Fetch(fresh);                // Wikipedia trending
 
         // At least one source succeeded = we're online
-        bool anyOk = cryptoOk || newsOk || trendOk || fxOk || socialOk || wikiOk;
+        bool anyOk = cryptoOk; // Only CryptoFeed returns bool, others are void
 
         // Derive composite scores
         // adMarketHealth: blend of sentiment, volatility, market mood

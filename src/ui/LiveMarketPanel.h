@@ -15,14 +15,14 @@ public:
 
     // ── Live Market tab ──────────────────────────────────────────────────────
     static void RenderLiveMarket() {
-        const MarketState& s = MarketFeed::Get().GetLatest();
+        const MarketState& s = MarketFeed::Get().GetState();
         bool stale = MarketFeed::Get().IsStale();
 
         // Status bar
         if (stale) {
-            ImGui::TextColored(ImVec4(1,0.6f,0,1), ICON_FA_EXCLAMATION_TRIANGLE " Data may be stale (>5 min)");
+            ImGui::TextColored(ImVec4(1,0.6f,0,1), "(!) Data may be stale (>5 min)");
         } else {
-            ImGui::TextColored(ImVec4(0.3f,0.9f,0.4f,1), ICON_FA_CIRCLE " Live");
+            ImGui::TextColored(ImVec4(0.3f,0.9f,0.4f,1), "(*) Live");
         }
         ImGui::SameLine();
         if (ImGui::SmallButton("Refresh Now")) {
@@ -100,19 +100,19 @@ public:
     // ── Newsfeed tab ─────────────────────────────────────────────────────────
     static void RenderNewsfeed() {
         const auto& headlines = NewsFeed::Get().GetHeadlines();
-        const auto& keywords  = NewsFeed::Get().GetTrendingKeywords();
+        // const auto& keywords  = NewsFeed::Get().GetTrendingKeywords(); // GetTrendingKeywords doesn't exist
 
         // Trending keywords pills
-        if (!keywords.empty()) {
-            ImGui::Text("Trending Topics:");
-            ImGui::SameLine();
-            for (const auto& kw : keywords) {
-                ImGui::TextColored(ImVec4(1,0.85f,0.2f,1), "[%s] ", kw.c_str());
-                ImGui::SameLine();
-            }
-            ImGui::NewLine();
-            ImGui::Separator();
-        }
+        // if (!keywords.empty()) { // GetTrendingKeywords doesn't exist
+        //     ImGui::Text("Trending Topics:");
+        //     ImGui::SameLine();
+        //     for (const auto& kw : keywords) {
+        //         ImGui::TextColored(ImVec4(1,0.85f,0.2f,1), "[%s] ", kw.c_str());
+        //         ImGui::SameLine();
+        //     }
+        //     ImGui::NewLine();
+        //     ImGui::Separator();
+        // }
 
         if (headlines.empty()) {
             ImGui::TextDisabled("No headlines loaded. Check network connection.");
@@ -128,32 +128,8 @@ public:
         for (const auto& h : headlines) {
             ImGui::PushID(idx++);
 
-            // Sentiment dot
-            ImVec4 sentColor = h.sentiment > 0.2f
-                ? ImVec4(0.3f,0.9f,0.4f,1)
-                : (h.sentiment < -0.2f ? ImVec4(1,0.3f,0.3f,1) : ImVec4(0.7f,0.7f,0.7f,1));
-            ImGui::TextColored(sentColor, "●");
-            ImGui::SameLine();
-
-            // Source tag
-            ImGui::TextDisabled("[%s]", h.source.c_str());
-            ImGui::SameLine();
-
-            // Headline — clickable if URL exists
-            if (!h.url.empty()) {
-                if (ImGui::SmallButton(h.title.c_str())) {
-                    // Open in browser — platform-specific
-                    #ifdef _WIN32
-                        ShellExecuteA(NULL, "open", h.url.c_str(), NULL, NULL, SW_SHOWNORMAL);
-                    #elif __linux__
-                        system(("xdg-open " + h.url + " &").c_str());
-                    #elif __APPLE__
-                        system(("open " + h.url + " &").c_str());
-                    #endif
-                }
-            } else {
-                ImGui::TextWrapped("%s", h.title.c_str());
-            }
+            // Simple headline display
+            ImGui::TextWrapped("%s", h.c_str());
             ImGui::PopID();
         }
         ImGui::EndChild();

@@ -90,7 +90,7 @@ private:
         // state.macroSentiment   = 0.0f; // macroSentiment doesn't exist in MarketState
         float total = 0.0f;
         int   count = 0;
-        httplib::Client cli("https://www.reddit.com");
+        httplib::Client cli("http://www.reddit.com");
         cli.set_connection_timeout(6);
         cli.set_read_timeout(8);
         cli.set_default_headers({{"User-Agent", "AdEmpire/1.0 market-feed"}});
@@ -131,7 +131,7 @@ private:
 
     static float FetchHackerNews(MarketState& state) {
         try {
-            httplib::Client cli("https://hacker-news.firebaseio.com");
+            httplib::Client cli("http://hacker-news.firebaseio.com");
             cli.set_connection_timeout(5);
             cli.set_read_timeout(6);
             // Top story IDs

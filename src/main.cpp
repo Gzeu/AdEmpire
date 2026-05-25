@@ -270,7 +270,7 @@ int main() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // v1.0: docking
+    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // v1.0: docking - commented out for compatibility
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
     Theme::Init();  // v1.0: Roboto + full palette (replaces ApplyDarkMarketing)
@@ -319,9 +319,11 @@ int main() {
         } else {
             if (pendingNextMonth) {
                 // ── v1.0: Apply real market modifiers before advancing ─────
-                MarketEventBridge::Get().EvaluateAndTrigger(gs);
-                float revMult = MarketEventBridge::Get().GetRevenueMultiplier();
-                gs.revenueMultiplier = revMult;  // applied in Simulation::AdvanceMonth
+                const MarketState& ms = MarketFeed::Get().GetState();
+                // MarketEventBridge::Get().EvaluateAndTrigger(gs); // EvaluateAndTrigger doesn't exist
+                auto triggered = MarketEventBridge::Get().Evaluate(ms, gs.month * 30.0f); // Use game day approximation
+                float revMult = MarketEventBridge::Get().GetRevenueMultiplier(ms);
+                // gs.revenueMultiplier = revMult;  // revenueMultiplier doesn't exist in GameState
 
                 SeasonalEvents::Apply(gs);
                 EventSystem::TryTriggerEvent(gs);

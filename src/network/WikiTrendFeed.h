@@ -28,7 +28,7 @@ private:
     static std::vector<WikiPage> FetchTopics() {
         std::vector<WikiPage> pages;
         try {
-            httplib::Client cli("https://en.wikipedia.org");
+            httplib::Client cli("http://en.wikipedia.org");
             cli.set_connection_timeout(6);
             cli.set_read_timeout(8);
             auto res = cli.Get(

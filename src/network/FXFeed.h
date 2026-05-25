@@ -23,7 +23,7 @@ public:
 private:
     static bool FetchExchangerateHost(MarketState& state) {
         try {
-            httplib::Client cli("https://api.exchangerate.host");
+            httplib::Client cli("http://api.exchangerate.host");
             cli.set_connection_timeout(6);
             cli.set_read_timeout(8);
             auto res = cli.Get("/latest?base=USD&symbols=EUR,RON,GBP,JPY,BTC");

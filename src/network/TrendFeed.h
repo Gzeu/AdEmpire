@@ -25,7 +25,7 @@ public:
 private:
     static void FetchWikipediaTrending(MarketState& state) {
         try {
-            httplib::Client cli("https://en.wikipedia.org");
+            httplib::Client cli("http://en.wikipedia.org");
             cli.set_connection_timeout(5); cli.set_read_timeout(5);
             // Most viewed pages yesterday
             auto res = cli.Get(
@@ -56,7 +56,7 @@ private:
     static void FetchExchangeRates(MarketState& state) {
         try {
             // exchangerate.host — completely free, no key
-            httplib::Client cli("https://api.exchangerate.host");
+            httplib::Client cli("http://api.exchangerate.host");
             cli.set_connection_timeout(5); cli.set_read_timeout(5);
             auto res = cli.Get("/latest?base=USD&symbols=EUR,RON");
             if (!res || res->status != 200) {

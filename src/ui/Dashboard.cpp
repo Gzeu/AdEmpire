@@ -113,7 +113,7 @@ void Dashboard::Render(GameState& gs) {
 
             // Apply market multiplier to ROI
             const MarketState& ms = MarketFeed::Get().GetState();
-            float mult = MarketEventBridge::GetCampaignMultiplier(ms);
+            float mult = MarketEventBridge::Get().GetRevenueMultiplier(ms);
 
             if (ImGui::BeginTable("##chantbl", 4,
                 ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame)) {
@@ -160,7 +160,7 @@ void Dashboard::Render(GameState& gs) {
         //  TAB 3 — Live Market
         // ════════════════════════════════════
         if (ImGui::BeginTabItem(" Live Market ")) {
-            LiveMarketPanel::Render();
+            LiveMarketPanel::RenderLiveMarket();
             ImGui::EndTabItem();
         }
 

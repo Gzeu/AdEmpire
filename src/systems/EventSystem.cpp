@@ -121,10 +121,7 @@ void EventSystem::TryTriggerEvent(GameState& gs) {
     // 1. Fire market-driven events from live MarketState
     const MarketState& ms = MarketFeed::Get().GetState();
     // if (!ms.isOffline) { // isOffline doesn't exist in MarketState
-    std::vector<std::string> triggered;
-    MarketEventBridge::EvaluateTriggers(ms, [&](const std::string& id) {
-        triggered.push_back(id);
-    });
+    std::vector<std::string> triggered = MarketEventBridge::Get().Evaluate(ms, gs.month * 30.0f);
     auto allEvents = GetAllEvents();
     for (const auto& evId : triggered) {
         // Find matching event by lowercase title search

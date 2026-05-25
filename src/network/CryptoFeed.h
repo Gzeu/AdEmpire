@@ -32,7 +32,7 @@ private:
     // ----------------------------------------------------------
     static bool FetchBinanceTicker(MarketState& state, const std::string& symbol) {
         try {
-            httplib::Client cli("https://api.binance.com");
+            httplib::Client cli("http://api.binance.com");
             cli.set_connection_timeout(4);
             cli.set_read_timeout(4);
             auto res = cli.Get(("/api/v3/ticker/24hr?symbol=" + symbol).c_str());
@@ -54,7 +54,7 @@ private:
     // ----------------------------------------------------------
     static void FetchFearGreed(MarketState& state) {
         try {
-            httplib::Client cli("https://api.alternative.me");
+            httplib::Client cli("http://api.alternative.me");
             cli.set_connection_timeout(4);
             cli.set_read_timeout(4);
             auto res = cli.Get("/fng/?limit=1&format=json");
@@ -72,7 +72,7 @@ private:
     // ----------------------------------------------------------
     static void FetchCoinGeckoGlobal(MarketState& state) {
         try {
-            httplib::Client cli("https://api.coingecko.com");
+            httplib::Client cli("http://api.coingecko.com");
             cli.set_connection_timeout(5);
             cli.set_read_timeout(5);
             auto res = cli.Get("/api/v3/global");

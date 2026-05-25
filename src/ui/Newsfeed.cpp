@@ -17,15 +17,15 @@ void Newsfeed::Render(GameState& gs) {
     const MarketState& ms = MarketFeed::Get().GetState();
 
     // ── Market pulse banner ─────────────────────────────────
-    std::string evtId = MarketEventBridge::GetDominantEventId(ms);
-    if (!evtId.empty() && evtId != "none") {
+    auto triggered = MarketEventBridge::Get().Evaluate(ms, gs.month * 30.0f);
+    if (!triggered.empty()) {
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.18f, 0.14f, 0.06f, 1.f));
         ImGui::BeginChild("##pulse", ImVec2(0, 36), true);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.f);
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.85f, 0.1f, 1.f));
         ImGui::Text("  ACTIVE EVENT: %s   |   Campaign modifier: x%.2f",
-            evtId.c_str(),
-            MarketEventBridge::GetCampaignMultiplier(ms));
+            triggered[0].c_str(),
+            MarketEventBridge::Get().GetRevenueMultiplier(ms));
         ImGui::PopStyleColor();
         ImGui::EndChild();
         ImGui::PopStyleColor();
