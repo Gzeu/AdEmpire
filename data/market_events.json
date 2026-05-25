@@ -1,94 +1,294 @@
 [
   {
-    "id": "crypto_bull_run",
-    "title": "Crypto Bull Run",
-    "description": "BTC surged +8% in 24h. Consumer confidence is high — Tech and Fintech clients increase ad budgets by 20%.",
-    "type": "market",
-    "probability": 1.0,
-    "effects": {
-      "tech_client_budget_mult": 1.20,
-      "fintech_client_budget_mult": 1.25,
-      "campaign_roi_mult": 1.10
-    }
-  },
-  {
     "id": "crypto_winter",
-    "title": "Crypto Winter",
-    "description": "BTC dropped -8% in 24h. Fintech clients freeze budgets. General ad spend drops 15%.",
-    "type": "market",
-    "probability": 1.0,
-    "effects": {
-      "fintech_client_budget_mult": 0.70,
-      "campaign_roi_mult": 0.85,
-      "new_client_chance_mult": 0.80
+    "name": "Crypto Winter",
+    "description": "BTC dropped over 8% in 24h — digital clients freeze ad budgets.",
+    "trigger": { "source": "CryptoFeed", "field": "btcChange24h", "op": "<", "value": -8.0 },
+    "effect": {
+      "clientBudgetMultiplier": 0.75,
+      "clientTypeFilter": ["Tech", "Crypto"],
+      "campaignRoiPenalty": -0.15,
+      "duration": 2
     }
   },
   {
-    "id": "market_panic",
-    "title": "Market Panic",
-    "description": "Fear & Greed Index below 20 — Extreme Fear. All clients reduce discretionary spending. AI rivals play defensively.",
-    "type": "market",
-    "probability": 1.0,
-    "effects": {
-      "all_budget_mult": 0.75,
-      "rival_aggression": -0.30,
-      "campaign_roi_mult": 0.80
+    "id": "crypto_bull_run",
+    "name": "Crypto Bull Run",
+    "description": "BTC surged 8%+ — crypto & fintech clients double their ad spend.",
+    "trigger": { "source": "CryptoFeed", "field": "btcChange24h", "op": ">", "value": 8.0 },
+    "effect": {
+      "clientBudgetMultiplier": 1.45,
+      "clientTypeFilter": ["Tech", "Crypto", "Finance"],
+      "campaignRoiBonus": 0.20,
+      "duration": 2
+    }
+  },
+  {
+    "id": "extreme_fear",
+    "name": "Extreme Fear",
+    "description": "Fear & Greed Index below 20. Market paralyzed — no new contracts.",
+    "trigger": { "source": "CryptoFeed", "field": "fearGreedIndex", "op": "<", "value": 20 },
+    "effect": {
+      "newClientRate": 0,
+      "campaignRoiPenalty": -0.25,
+      "duration": 1
+    }
+  },
+  {
+    "id": "extreme_greed",
+    "name": "Extreme Greed",
+    "description": "Fear & Greed Index above 80. Everyone wants to advertise now.",
+    "trigger": { "source": "CryptoFeed", "field": "fearGreedIndex", "op": ">", "value": 80 },
+    "effect": {
+      "clientBudgetMultiplier": 1.30,
+      "newClientRateBonus": 2,
+      "campaignRoiBonus": 0.15,
+      "duration": 1
+    }
+  },
+  {
+    "id": "crypto_panic",
+    "name": "Crypto Panic Sell",
+    "description": "Bear market + extreme fear combo. Crypto clients pull all campaigns.",
+    "trigger": { "source": "MarketEventBridge", "compound": true },
+    "effect": {
+      "clientTypeFilter": ["Crypto"],
+      "clientBudgetMultiplier": 0.0,
+      "duration": 1
+    }
+  },
+  {
+    "id": "currency_shock",
+    "name": "Currency Shock",
+    "description": "USD/RON exceeded 5.20 — local costs spike 20% for Romanian clients.",
+    "trigger": { "source": "FXFeed", "field": "usdRon", "op": ">", "value": 5.20 },
+    "effect": {
+      "staffSalaryMultiplier": 1.20,
+      "localClientBudgetMultiplier": 0.85,
+      "duration": 3
+    }
+  },
+  {
+    "id": "strong_dollar",
+    "name": "Strong Dollar",
+    "description": "EUR/USD below 1.05 — international clients reduce USD-denominated budgets.",
+    "trigger": { "source": "FXFeed", "field": "eurUsd", "op": "<", "value": 1.05 },
+    "effect": {
+      "clientTypeFilter": ["International", "Finance"],
+      "clientBudgetMultiplier": 0.88,
+      "duration": 2
+    }
+  },
+  {
+    "id": "weak_dollar",
+    "name": "Weak Dollar",
+    "description": "EUR/USD above 1.12 — European clients have more USD purchasing power.",
+    "trigger": { "source": "FXFeed", "field": "eurUsd", "op": ">", "value": 1.12 },
+    "effect": {
+      "clientTypeFilter": ["International"],
+      "clientBudgetMultiplier": 1.18,
+      "duration": 2
     }
   },
   {
     "id": "ai_hype_wave",
-    "title": "AI Hype Wave",
-    "description": "Hacker News flooded with AI stories. Tech clients competing for attention — premium placements sell at 30% markup.",
-    "type": "trend",
-    "probability": 1.0,
-    "effects": {
-      "tech_campaign_roi_mult": 1.30,
-      "premium_placement_mult": 1.30,
-      "new_tech_client_chance": 0.25
+    "name": "AI Hype Wave",
+    "description": "AI is dominating HackerNews and Reddit. Tech clients want AI-focused campaigns.",
+    "trigger": { "source": "SocialPulseFeed", "field": "aiHypeScore", "op": ">", "value": 0.65 },
+    "effect": {
+      "clientTypeFilter": ["Tech"],
+      "campaignRoiBonus": 0.35,
+      "clientBudgetMultiplier": 1.30,
+      "specialization": "Digital",
+      "duration": 3
+    }
+  },
+  {
+    "id": "ai_mainstream",
+    "name": "AI Goes Mainstream",
+    "description": "AI trending on Wikipedia globally. Every sector wants AI messaging.",
+    "trigger": { "source": "WikiTrendFeed", "field": "wikiAiScore", "op": ">", "value": 0.5 },
+    "effect": {
+      "campaignRoiBonus": 0.20,
+      "duration": 2
+    }
+  },
+  {
+    "id": "ai_saturation",
+    "name": "AI Saturation",
+    "description": "Everyone's doing AI ads. Differentiation premium evaporates.",
+    "trigger": { "source": "SocialPulseFeed", "field": "aiHypeScore", "op": ">", "value": 0.8 },
+    "effect": {
+      "campaignRoiPenalty": -0.10,
+      "specialization": "Digital",
+      "duration": 1
+    }
+  },
+  {
+    "id": "adtech_boom",
+    "name": "AdTech Boom",
+    "description": "Social media and advertising trending globally. Ad market is hot.",
+    "trigger": { "source": "WikiTrendFeed", "field": "wikiAdtechScore", "op": ">", "value": 0.30 },
+    "effect": {
+      "clientBudgetMultiplier": 1.20,
+      "newClientRateBonus": 1,
+      "duration": 2
+    }
+  },
+  {
+    "id": "economic_downturn",
+    "name": "Economic Downturn",
+    "description": "Recession fears trending on Wikipedia. Clients cut all discretionary spend.",
+    "trigger": { "source": "WikiTrendFeed", "field": "wikiMacroBearScore", "op": ">", "value": 0.35 },
+    "effect": {
+      "clientBudgetMultiplier": 0.70,
+      "campaignRoiPenalty": -0.20,
+      "newClientRate": -1,
+      "duration": 3
+    }
+  },
+  {
+    "id": "geopolitical_tension",
+    "name": "Geopolitical Tension",
+    "description": "War or sanctions trending globally. International clients pause campaigns.",
+    "trigger": { "source": "WikiTrendFeed", "field": "wikiGeoScore", "op": ">", "value": 0.25 },
+    "effect": {
+      "clientTypeFilter": ["International"],
+      "clientBudgetMultiplier": 0.80,
+      "duration": 2
+    }
+  },
+  {
+    "id": "positive_market_mood",
+    "name": "Positive Market Mood",
+    "description": "Reddit and HN sentiment bullish. Clients are confident and spending.",
+    "trigger": { "source": "SocialPulseFeed", "field": "newsSentiment", "op": ">", "value": 0.4 },
+    "effect": {
+      "clientBudgetMultiplier": 1.12,
+      "duration": 1
+    }
+  },
+  {
+    "id": "negative_market_mood",
+    "name": "Negative Market Mood",
+    "description": "Social media flooded with bearish content. Cautious ad spending.",
+    "trigger": { "source": "SocialPulseFeed", "field": "newsSentiment", "op": "<", "value": -0.4 },
+    "effect": {
+      "clientBudgetMultiplier": 0.88,
+      "duration": 1
+    }
+  },
+  {
+    "id": "golden_quarter",
+    "name": "Golden Quarter",
+    "description": "Crypto bull + AI hype + healthy ad market. Best possible conditions.",
+    "trigger": { "source": "MarketEventBridge", "compound": true },
+    "effect": {
+      "clientBudgetMultiplier": 1.50,
+      "campaignRoiBonus": 0.30,
+      "newClientRateBonus": 3,
+      "revenueMultiplier": 1.40,
+      "duration": 2
+    }
+  },
+  {
+    "id": "budget_freeze",
+    "name": "Budget Freeze",
+    "description": "Bear market + recession fear. Nobody is spending on advertising.",
+    "trigger": { "source": "MarketEventBridge", "compound": true },
+    "effect": {
+      "clientBudgetMultiplier": 0.50,
+      "newClientRate": 0,
+      "campaignRoiPenalty": -0.30,
+      "duration": 3
+    }
+  },
+  {
+    "id": "international_pullback",
+    "name": "International Pullback",
+    "description": "Strong dollar + geopolitical risk. International clients go dark.",
+    "trigger": { "source": "MarketEventBridge", "compound": true },
+    "effect": {
+      "clientTypeFilter": ["International"],
+      "clientBudgetMultiplier": 0.60,
+      "duration": 2
+    }
+  },
+  {
+    "id": "premium_ad_pricing",
+    "name": "Premium Ad Pricing Window",
+    "description": "Extreme greed + AdTech boom. Clients will pay a premium for top placements.",
+    "trigger": { "source": "MarketEventBridge", "compound": true },
+    "effect": {
+      "revenueMultiplier": 1.35,
+      "campaignRoiBonus": 0.25,
+      "duration": 1
+    }
+  },
+  {
+    "id": "ad_market_hot",
+    "name": "Ad Market Running Hot",
+    "description": "Combined signals: ad market health above 130%. Scale everything.",
+    "trigger": { "source": "TrendFeed", "field": "adMarketHealth", "op": ">", "value": 1.30 },
+    "effect": {
+      "clientBudgetMultiplier": 1.25,
+      "campaignRoiBonus": 0.15,
+      "duration": 2
+    }
+  },
+  {
+    "id": "ad_market_cold",
+    "name": "Ad Market Cold",
+    "description": "Combined signals: ad market health below 70%. Survive mode.",
+    "trigger": { "source": "TrendFeed", "field": "adMarketHealth", "op": "<", "value": 0.70 },
+    "effect": {
+      "clientBudgetMultiplier": 0.65,
+      "staffMoraleMultiplier": 0.85,
+      "duration": 3
+    }
+  },
+  {
+    "id": "high_btc_volume",
+    "name": "Massive BTC Trading Volume",
+    "description": "BTC 24h volume exceeded $50B. Market is moving — crypto clients are watching.",
+    "trigger": { "source": "CryptoFeed", "field": "btcVolume", "op": ">", "value": 50000000000 },
+    "effect": {
+      "clientTypeFilter": ["Crypto", "Finance"],
+      "attentionBonus": 0.20,
+      "duration": 1
+    }
+  },
+  {
+    "id": "crypto_community_fomo",
+    "name": "Crypto FOMO",
+    "description": "Reddit crypto communities are euphoric. FOMO-driven ad spend spike.",
+    "trigger": { "source": "SocialPulseFeed", "field": "cryptoSentiment", "op": ">", "value": 0.5 },
+    "effect": {
+      "clientTypeFilter": ["Crypto"],
+      "clientBudgetMultiplier": 1.40,
+      "duration": 1
+    }
+  },
+  {
+    "id": "macro_pessimism",
+    "name": "Macro Pessimism",
+    "description": "r/economics flooded with bearish sentiment. CFOs cutting Q-budgets.",
+    "trigger": { "source": "SocialPulseFeed", "field": "macroSentiment", "op": "<", "value": -0.5 },
+    "effect": {
+      "clientBudgetMultiplier": 0.78,
+      "duration": 2
     }
   },
   {
     "id": "tech_sector_boom",
-    "title": "Tech Sector Boom",
-    "description": "AI hype + crypto bull run firing simultaneously. Peak conditions for tech advertising. All Tech campaigns +35% ROI.",
-    "type": "market",
-    "probability": 1.0,
-    "effects": {
-      "tech_campaign_roi_mult": 1.35,
-      "all_budget_mult": 1.10,
-      "rival_aggression": 0.20
-    }
-  },
-  {
-    "id": "ad_market_boom",
-    "title": "Ad Market Boom",
-    "description": "Global ad market health above 130%. Clients increase annual budgets. All new contracts +15% value.",
-    "type": "market",
-    "probability": 1.0,
-    "effects": {
-      "all_budget_mult": 1.15,
-      "new_contract_value_mult": 1.15
-    }
-  },
-  {
-    "id": "ad_budgets_cut",
-    "title": "Ad Budget Cuts",
-    "description": "Market health below 70%. CFOs across industries cutting marketing spend. Expect 25% fewer new leads this month.",
-    "type": "market",
-    "probability": 1.0,
-    "effects": {
-      "new_client_chance_mult": 0.75,
-      "all_budget_mult": 0.85
-    }
-  },
-  {
-    "id": "trending_topic_active",
-    "title": "Global Trending Topic",
-    "description": "A topic is dominating global attention. Campaigns targeting it get a 25% engagement bonus this month.",
-    "type": "trend",
-    "probability": 1.0,
-    "effects": {
-      "trending_campaign_roi_mult": 1.25
+    "name": "Tech Sector Boom",
+    "description": "Crypto bull + AI hype simultaneously. Tech IPOs everywhere.",
+    "trigger": { "source": "MarketEventBridge", "compound": true },
+    "effect": {
+      "clientTypeFilter": ["Tech"],
+      "clientBudgetMultiplier": 1.55,
+      "newClientRateBonus": 2,
+      "duration": 3
     }
   }
 ]
