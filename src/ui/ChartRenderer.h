@@ -283,9 +283,9 @@ void DrawDonut(
     float innerR = cfg.radius * cfg.innerRatio;
 
     // draw slices
-    float angle = -IM_PI / 2.0f;  // start at 12 o'clock
+    float angle = -M_PI / 2.0f;  // start at 12 o'clock
     for (int i = 0; i < n; ++i) {
-        float sweep = (values[i] / total) * 2.0f * IM_PI;
+        float sweep = (values[i] / total) * 2.0f * M_PI;
         ImU32 col = ImGui::ColorConvertFloat4ToU32(colors[i]);
         // outer arc filled as triangle fan from center, then cut with inner circle
         // We approximate with AddConvexPolyFilled fan

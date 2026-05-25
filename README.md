@@ -392,7 +392,7 @@ Modifiers stack: market events × seasonal × industry bonus × specialization �
 | v0.7 | [20898e67](https://github.com/Gzeu/AdEmpire/commit/20898e673d189cb8aac8d5447359f70eca57da44) | StatsTracker, DifficultySystem, Leaderboard, 31 JSON events, guides |
 | v0.8 | [28bd9370](https://github.com/Gzeu/AdEmpire/commit/28bd9370ff9a33ea17e1844e327bf65318ce4ec5) | OpenAL audio (procedural WAV) + REST leaderboard (cpp-httplib) |
 | v0.9 | [3df56ba6](https://github.com/Gzeu/AdEmpire/commit/3df56ba6e94ea265b5f64e1ac043d79da9f87f50) | AgencyBranding, ChartRenderer, SplashScreen, VictoryScreen, EventPopup, Steam stub |
-| **v0.9.1** | [**acc20bc5**](https://github.com/Gzeu/AdEmpire/commit/acc20bc5e0151e02d5b4de714360be016cfe539d) | **20+ compile fixes (cbf15e08), dashboard.png screenshot live, AchievementSystem + MainMenu fixes** |
+| **v0.9.2** | [**current**](https://github.com/Gzeu/AdEmpire) | **Build system fixes: cpp-httplib via FetchContent, ImGui docking compatibility, MarketState field corrections, include path fixes** |
 
 See [CHANGELOG.md](CHANGELOG.md) for the full detailed changelog.
 

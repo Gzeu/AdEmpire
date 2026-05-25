@@ -12,17 +12,21 @@
 
 namespace Theme {
 
+    // Forward declaration
+    inline void ApplyDarkMarketing();
+
     // Call once after ImGui::CreateContext() and before the render loop.
     // Returns the loaded Roboto font pointer (use for large headings if needed).
     inline ImFont* Init() {
         ImGuiIO& io = ImGui::GetIO();
 
         // ── Docking ────────────────────────────────────────────────────────────
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        // Note: Docking features removed for compatibility with older ImGui versions
+        // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         // Optional: detach panels into separate OS windows
         // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-        io.ConfigDockingWithShift = false;   // drag any panel to dock freely
-        io.ConfigDockingAlwaysTabBar = false;
+        // io.ConfigDockingWithShift = false;   // drag any panel to dock freely
+        // io.ConfigDockingAlwaysTabBar = false;
 
         // ── Font ──────────────────────────────────────────────────────────────
         ImFont* roboto = nullptr;
@@ -77,7 +81,7 @@ namespace Theme {
 
         // Docking tab bar
         s.TabBarBorderSize    = 1.f;
-        s.DockingSeparatorSize = 3.f;
+        // s.DockingSeparatorSize = 3.f; // Removed for compatibility
 
         auto* c = s.Colors;
 
@@ -138,8 +142,8 @@ namespace Theme {
         c[ImGuiCol_TabUnfocusedActive]  = ImVec4(0.13f, 0.25f, 0.55f, 1.00f);
 
         // ── Docking ──────────────────────────────────────────────────────────
-        c[ImGuiCol_DockingPreview]      = ImVec4(0.20f, 0.45f, 0.90f, 0.70f);
-        c[ImGuiCol_DockingEmptyBg]      = ImVec4(0.04f, 0.05f, 0.09f, 1.00f);
+        // c[ImGuiCol_DockingPreview]      = ImVec4(0.20f, 0.45f, 0.90f, 0.70f); // Removed for compatibility
+        // c[ImGuiCol_DockingEmptyBg]      = ImVec4(0.04f, 0.05f, 0.09f, 1.00f); // Removed for compatibility
 
         // ── Plot ─────────────────────────────────────────────────────────────
         c[ImGuiCol_PlotLines]           = ImVec4(0.30f, 0.80f, 0.50f, 1.00f);

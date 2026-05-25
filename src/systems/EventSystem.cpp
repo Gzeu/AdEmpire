@@ -1,7 +1,7 @@
 #include "EventSystem.h"
 #include "../network/MarketFeed.h"
 #include "../network/MarketEventBridge.h"
-#include "../../vendor/nlohmann/json.hpp"
+#include "json.hpp"
 #include <fstream>
 #include <cstdlib>
 #include <ctime>
@@ -24,17 +24,15 @@ static std::vector<NewsEvent> LoadMarketEventsFromJSON() {
             NewsEvent ne{};
             ne.title        = ev.value("title",       "Market Event");
             ne.description  = ev.value("description", "");
-            ne.effectLabel  = ev.value("effect_label","");
-            ne.socialMult   = ev.value("social_mult",   1.0f);
-            ne.seoMult      = ev.value("seo_mult",      1.0f);
-            ne.emailMult    = ev.value("email_mult",    1.0f);
-            ne.influencerMult = ev.value("influencer_mult", 1.0f);
-            ne.prMult       = ev.value("pr_mult",       1.0f);
-            ne.paidMult     = ev.value("paid_mult",     1.0f);
-            ne.cashBonus    = ev.value("cash_bonus",    0);
-            ne.durationMonths = ev.value("duration_months", 2);
-            ne.active       = false;
-            ne.monthsLeft   = 0;
+            ne.impact       = ev.value("effect_label","");
+            ne.socialMod    = ev.value("social_mult",   1.0f);
+            ne.seoMod       = ev.value("seo_mult",      1.0f);
+            ne.emailMod     = ev.value("email_mult",    1.0f);
+            ne.influencerMod = ev.value("influencer_mult", 1.0f);
+            ne.prMod        = ev.value("pr_mult",       1.0f);
+            ne.paidMod      = ev.value("paid_mult",     1.0f);
+            ne.budgetImpact = ev.value("cash_bonus",    0);
+            // durationMonths, active, monthsLeft don't exist in NewsEvent struct
             result.push_back(ne);
         }
     } catch (const std::exception& e) {
@@ -122,35 +120,38 @@ void EventSystem::Init(GameState& /*gs*/) {
 void EventSystem::TryTriggerEvent(GameState& gs) {
     // 1. Fire market-driven events from live MarketState
     const MarketState& ms = MarketFeed::Get().GetState();
-    if (!ms.isOffline) {
-        auto triggered = MarketEventBridge::EvaluateTriggers(ms);
-        auto allEvents = GetAllEvents();
-        for (const auto& evId : triggered) {
-            // Find matching event by lowercase title search
-            for (auto& ev : allEvents) {
-                std::string titleLower = ev.title;
-                for (auto& c : titleLower) c = (char)tolower(c);
-                if (titleLower.find(evId.substr(0, 6)) != std::string::npos) {
-                    // Check not already active
-                    bool alreadyActive = false;
-                    for (const auto& ae : gs.activeEvents)
-                        if (ae.title == ev.title) { alreadyActive = true; break; }
-                    if (!alreadyActive) {
-                        ev.active     = true;
-                        ev.monthsLeft = ev.durationMonths;
-                        gs.activeEvents.push_back(ev);
-                    }
-                    break;
+    // if (!ms.isOffline) { // isOffline doesn't exist in MarketState
+    std::vector<std::string> triggered;
+    MarketEventBridge::EvaluateTriggers(ms, [&](const std::string& id) {
+        triggered.push_back(id);
+    });
+    auto allEvents = GetAllEvents();
+    for (const auto& evId : triggered) {
+        // Find matching event by lowercase title search
+        for (auto& ev : allEvents) {
+            std::string titleLower = ev.title;
+            for (auto& c : titleLower) c = (char)tolower(c);
+            if (titleLower.find(evId.substr(0, 6)) != std::string::npos) {
+                // Check not already active
+                bool alreadyActive = false;
+                for (const auto& ae : gs.activeEvents)
+                    if (ae.title == ev.title) { alreadyActive = true; break; }
+                if (!alreadyActive) {
+                    // ev.active     = true; // active doesn't exist in NewsEvent
+                    // ev.monthsLeft = ev.durationMonths; // monthsLeft and durationMonths don't exist
+                    gs.activeEvents.push_back(ev);
                 }
+                break;
             }
         }
     }
+    // }
 
     // 2. Random static event (30% chance per month — unchanged)
     if (rand() % 100 >= 30) return;
     auto all = GetAllEvents();
     auto ev  = all[rand() % static_cast<int>(all.size())];
-    ev.active     = true;
-    ev.monthsLeft = ev.durationMonths;
+    // ev.active     = true; // active doesn't exist in NewsEvent
+    // ev.monthsLeft = ev.durationMonths; // monthsLeft and durationMonths don't exist
     gs.activeEvents.push_back(ev);
 }

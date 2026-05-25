@@ -5,7 +5,9 @@
 #include "../systems/MarketEventBridge.h"
 #include <ctime>
 
-void Newsfeed::Render() {
+std::vector<NewsEntry> Newsfeed::s_entries;
+
+void Newsfeed::Render(GameState& gs) {
     ImGui::Begin("Newsfeed");
 
     ImGui::TextUnformatted("LIVE MARKET INTELLIGENCE");
@@ -110,4 +112,8 @@ void Newsfeed::Render() {
     ImGui::PopStyleColor();
 
     ImGui::End();
+}
+
+void Newsfeed::PushNews(const std::string& text, float r, float g, float b) {
+    s_entries.push_back({text, r, g, b});
 }

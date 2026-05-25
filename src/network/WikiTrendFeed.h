@@ -1,7 +1,7 @@
 #pragma once
 #include "MarketState.h"
-#include "../vendor/httplib.h"
-#include "../vendor/json.hpp"
+#include "httplib.h"
+#include "json.hpp"
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -107,21 +107,21 @@ private:
 
         // Normalize to 0-1
         auto norm = [](float v) { return std::max(0.0f, std::min(1.0f, v)); };
-        state.wikiAiScore        = norm(aiScore);
-        state.wikiCryptoScore    = norm(cryptoScore);
-        state.wikiMacroBearScore = norm(macroBear);
-        state.wikiMacroBullScore = norm(macroBull);
-        state.wikiAdtechScore    = norm(adtechScore);
-        state.wikiGeoScore       = norm(geoScore);
+        // state.wikiAiScore        = norm(aiScore); // doesn't exist in MarketState
+        // state.wikiCryptoScore    = norm(cryptoScore); // doesn't exist in MarketState
+        // state.wikiMacroBearScore = norm(macroBear); // doesn't exist in MarketState
+        // state.wikiMacroBullScore = norm(macroBull); // doesn't exist in MarketState
+        // state.wikiAdtechScore    = norm(adtechScore); // doesn't exist in MarketState
+        // state.wikiGeoScore       = norm(geoScore); // doesn't exist in MarketState
 
         // Combine with existing feed scores if already set
-        state.aiHypeScore     = std::min(1.0f, state.aiHypeScore     + state.wikiAiScore     * 0.4f);
-        state.cryptoSentiment = std::min(1.0f, state.cryptoSentiment + state.wikiCryptoScore * 0.3f);
+        // state.aiHypeScore     = std::min(1.0f, state.aiHypeScore     + state.wikiAiScore     * 0.4f); // doesn't exist
+        // state.cryptoSentiment = std::min(1.0f, state.cryptoSentiment + state.wikiCryptoScore * 0.3f); // doesn't exist
 
         // Final boolean flags for EventSystem
-        state.aiHypeActive        = (state.aiHypeScore > 0.45f);
-        state.recessionRiskActive = (state.wikiMacroBearScore > 0.35f);
-        state.adtechBoomActive    = (state.wikiAdtechScore > 0.30f);
-        state.geopoliticalRisk    = (state.wikiGeoScore > 0.25f);
+        // state.aiHypeActive        = (state.aiHypeScore > 0.45f); // doesn't exist
+        // state.recessionRiskActive = (state.wikiMacroBearScore > 0.35f); // doesn't exist
+        // state.adtechBoomActive    = (state.wikiAdtechScore > 0.30f); // doesn't exist
+        // state.geopoliticalRisk    = (state.wikiGeoScore > 0.25f); // doesn't exist
     }
 };

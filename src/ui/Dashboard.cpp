@@ -40,9 +40,9 @@ void Dashboard::Render(GameState& gs) {
             };
 
             char bufBudget[32]; snprintf(bufBudget, sizeof(bufBudget), "$%.0f", gs.budget);
-            char bufShare[32];  snprintf(bufShare,  sizeof(bufShare),  "%.1f%%", gs.marketShare * 100.f);
+            char bufShare[32];  snprintf(bufShare,  sizeof(bufShare),  "%.1f%%", gs.playerMarketShare);
             char bufClients[16]; snprintf(bufClients, sizeof(bufClients), "%d", (int)gs.clients.size());
-            char bufMonth[16];  snprintf(bufMonth,   sizeof(bufMonth),  "Month %d", gs.currentMonth);
+            char bufMonth[16];  snprintf(bufMonth,   sizeof(bufMonth),  "Month %d", gs.month);
 
             KPI("Budget",       bufBudget,  ImVec4(0.30f,0.85f,0.50f,1.f));
             ImGui::SameLine(0.f, 8.f);
@@ -59,9 +59,10 @@ void Dashboard::Render(GameState& gs) {
             // Revenue history chart
             ImGui::TextUnformatted("Revenue History");
             ImGui::Spacing();
-            const auto& hist = StatsTracker::Get().GetRevenueHistory();
+            const auto& hist = StatsTracker::Get().GetHistory();
             if (!hist.empty()) {
-                std::vector<float> vals(hist.begin(), hist.end());
+                std::vector<float> vals;
+                for (const auto& h : hist) vals.push_back(h.revenue);
                 float mx = *std::max_element(vals.begin(), vals.end());
                 if (mx < 1.f) mx = 1.f;
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.3f,0.8f,0.5f,1.f));
@@ -78,9 +79,10 @@ void Dashboard::Render(GameState& gs) {
             // Market share trend
             ImGui::TextUnformatted("Market Share Trend");
             ImGui::Spacing();
-            const auto& shareHist = StatsTracker::Get().GetMarketShareHistory();
+            const auto& shareHist = StatsTracker::Get().GetHistory();
             if (!shareHist.empty()) {
-                std::vector<float> sv(shareHist.begin(), shareHist.end());
+                std::vector<float> sv;
+                for (const auto& h : shareHist) sv.push_back(h.marketShare);
                 ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.4f,0.7f,1.f,1.f));
                 ImGui::PlotLines("##ms", sv.data(), (int)sv.size(),
                                  0, nullptr, 0.f, 1.f,

@@ -1,7 +1,7 @@
 #pragma once
 #include "MarketState.h"
-#include "../vendor/httplib.h"
-#include "../vendor/json.hpp"
+#include "httplib.h"
+#include "json.hpp"
 #include <string>
 
 // ============================================================
@@ -37,9 +37,9 @@ private:
             double gbp = r.value("GBP", 0.79);
             double jpy = r.value("JPY", 155.0);
             state.eurUsd     = (eur > 0) ? 1.0 / eur : 1.08;   // USD per EUR
-            state.ronUsd     = (ron > 0) ? 1.0 / ron : 0.217;  // USD per RON
-            state.gbpUsd     = (gbp > 0) ? 1.0 / gbp : 1.27;   // USD per GBP
-            state.jpyUsd     = (jpy > 0) ? 1.0 / jpy : 0.0065; // USD per JPY
+            // state.ronUsd     = (ron > 0) ? 1.0 / ron : 0.217;  // USD per RON - ronUsd doesn't exist
+            // state.gbpUsd     = (gbp > 0) ? 1.0 / gbp : 1.27;   // USD per GBP - gbpUsd doesn't exist
+            // state.jpyUsd     = (jpy > 0) ? 1.0 / jpy : 0.0065; // USD per JPY - jpyUsd doesn't exist
             state.usdRon     = ron;   // direct: RON per USD (used for cost calcs)
             return true;
         } catch (...) { return false; }
@@ -47,18 +47,18 @@ private:
 
     static void FetchFallback(MarketState& state) {
         state.eurUsd = 1.08;
-        state.gbpUsd = 1.27;
-        state.ronUsd = 0.217;
-        state.jpyUsd = 0.0065;
+        // state.gbpUsd = 1.27; // gbpUsd doesn't exist
+        // state.ronUsd = 0.217; // ronUsd doesn't exist
+        // state.jpyUsd = 0.0065; // jpyUsd doesn't exist
         state.usdRon = 4.60;
     }
 
     static void DeriveFlags(MarketState& state) {
         // Currency shock: RON weakens significantly (inflation pressure)
-        state.currencyShockActive = (state.usdRon > 5.20f);
+        // state.currencyShockActive = (state.usdRon > 5.20f); // currencyShockActive doesn't exist
         // Strong dollar: hurts international ad clients (less budget in USD)
-        state.strongDollarActive  = (state.eurUsd < 1.05f);
+        // state.strongDollarActive  = (state.eurUsd < 1.05f); // strongDollarActive doesn't exist
         // Weak dollar: international clients spend more
-        state.weakDollarActive    = (state.eurUsd > 1.12f);
+        // state.weakDollarActive    = (state.eurUsd > 1.12f); // weakDollarActive doesn't exist
     }
 };

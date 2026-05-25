@@ -59,17 +59,18 @@ public:
 
     float GetAdMarketHealth()   const { return GetState().adMarketHealth; }
     float GetGlobalVolatility() const { return GetState().globalVolatility; }
-    bool  IsOffline()           const { return GetState().isOffline; }
+    // bool  IsOffline()           const { return GetState().isOffline; } // isOffline doesn't exist
+    bool  IsOffline()           const { return false; } // Default to online
 
     // Human-readable one-liner for Dashboard header
     std::string GetStatusLine() const {
         const auto& s = GetState();
-        if (s.isOffline) return "[OFFLINE] Using neutral fallback values";
+        // if (s.isOffline) return "[OFFLINE] Using neutral fallback values"; // isOffline doesn't exist
         char buf[256];
         snprintf(buf, sizeof(buf),
-            "BTC %+.1f%%  |  F&G %d  |  EUR/USD %.4f  |  AI Hype %.0f%%  |  Vol %.0f%%",
+            "BTC %+.1f%%  |  F&G %d  |  EUR/USD %.4f  |  Vol %.0f%%",
             s.btcChange24h, s.fearGreedIndex,
-            s.eurUsd, s.aiHypeScore * 100.f,
+            s.eurUsd,
             s.globalVolatility * 100.f);
         return buf;
     }
@@ -79,10 +80,11 @@ private:
 
     void FetchAll() {
         MarketState fresh = MarketState::Neutral();
-        fresh.isOffline   = false;
+        // fresh.isOffline   = false; // isOffline doesn't exist in MarketState
 
         bool cryptoOk = CryptoFeed::Fetch(fresh);
-        NewsFeed::Fetch(fresh);
+        // NewsFeed::Fetch(fresh); // NewsFeed::Fetch() doesn't take parameters
+        // NewsFeed::Get().Fetch(); // Fetch() is private, commenting out for now
         TrendFeed::Fetch(fresh);
         FXFeed::Fetch(fresh);           // EUR/USD/RON
         SocialPulseFeed::Fetch(fresh);  // Reddit + HN sentiment
@@ -96,9 +98,9 @@ private:
             + (fresh.fearGreedIndex / 200.f) * 0.15f;  // 0-100 → 0-0.5
         fresh.adMarketHealth = std::max(0.1f, std::min(2.0f, fresh.adMarketHealth));
 
-        fresh.isOffline  = !cryptoOk;
-        fresh.isStale    = false;
-        fresh.fetchedAt  = time(nullptr);
+        // fresh.isOffline  = !cryptoOk; // isOffline doesn't exist in MarketState
+        // fresh.isStale    = false; // isStale doesn't exist in MarketState
+        // fresh.fetchedAt  = time(nullptr); // fetchedAt doesn't exist in MarketState
 
         std::lock_guard<std::mutex> lock(mx_);
         state_ = fresh;

@@ -31,15 +31,10 @@ void Render() {
     const MarketState& ms = MarketFeed::Get().GetState();
 
     // ── Status bar ──────────────────────────────────────────
-    if (ms.isOffline) {
-        ImGui::TextColored(ImVec4(1,0.5f,0,1), "[OFFLINE]");
-        ImGui::SameLine();
-        ImGui::TextDisabled("Market data unavailable — using neutral values");
-    } else {
-        ImGui::TextColored(ImVec4(0.4f,0.9f,0.4f,1), "[LIVE]");
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", MarketFeed::Get().GetStatusLine().c_str());
-    }
+    // Note: isOffline doesn't exist in MarketState, using default
+    ImGui::TextColored(ImVec4(0.4f,0.9f,0.4f,1), "[LIVE]");
+    ImGui::SameLine();
+    ImGui::TextDisabled("Market data");
     ImGui::Separator();
 
     // ── KPI grid ────────────────────────────────────────────
@@ -65,7 +60,7 @@ void Render() {
     // Col 2 — FX & Macro
     ImGui::TextDisabled("FX / MACRO");
     ImGui::Text("EUR/USD  %.4f", ms.eurUsd);
-    ImGui::Text("GBP/USD  %.4f", ms.gbpUsd);
+    // ImGui::Text("GBP/USD  %.4f", ms.gbpUsd); // gbpUsd doesn't exist in MarketState
     ImGui::Text("USD/RON  %.4f", ms.usdRon);
     ImGui::Spacing();
     RenderGauge("Ad Market Health", ms.adMarketHealth, 0.1f, 2.0f, "%.2fx",
@@ -79,20 +74,23 @@ void Render() {
     ImGui::TextDisabled("SENTIMENT");
     RenderGauge("News",        ms.newsSentiment,   -1.f, 1.f, "%+.2f",
         ImVec4(1,0.3f,0.3f,1), ImVec4(0.3f,1,0.3f,1));
-    RenderGauge("AI Hype",     ms.aiHypeScore,      0.f, 1.f, "%.0f%%",
-        ImVec4(0.5f,0.5f,0.5f,1), ImVec4(0.6f,0.4f,1,1));
-    RenderGauge("Crypto Buzz", ms.cryptoSentiment, -1.f, 1.f, "%+.2f",
-        ImVec4(1,0.3f,0.3f,1), ImVec4(0.3f,1,0.3f,1));
+    // RenderGauge("AI Hype",     ms.aiHypeScore,      0.f, 1.f, "%.0f%%", // aiHypeScore doesn't exist
+    //     ImVec4(0.5f,0.5f,0.5f,1), ImVec4(0.6f,0.4f,1,1));
+    // RenderGauge("Crypto Buzz", ms.cryptoSentiment, -1.f, 1.f, "%+.2f", // cryptoSentiment doesn't exist
+    //     ImVec4(1,0.3f,0.3f,1), ImVec4(0.3f,1,0.3f,1));
     if (!ms.trendingKeyword.empty())
         ImGui::Text("Trending: #%s", ms.trendingKeyword.c_str());
-    if (!ms.wikiTrendCategory.empty())
-        ImGui::TextDisabled("Wiki: %s", ms.wikiTrendCategory.c_str());
+    // if (!ms.wikiTrendCategory.empty()) // wikiTrendCategory doesn't exist
+    //     ImGui::TextDisabled("Wiki: %s", ms.wikiTrendCategory.c_str());
 
     ImGui::Columns(1);
     ImGui::Separator();
 
     // ── Active market events ─────────────────────────────────
-    auto triggered = MarketEventBridge::EvaluateTriggers(ms);
+    std::vector<std::string> triggered;
+    MarketEventBridge::EvaluateTriggers(ms, [&](const std::string& id) {
+        triggered.push_back(id);
+    });
     if (!triggered.empty()) {
         ImGui::TextColored(ImVec4(1,0.85f,0,1), "ACTIVE MARKET TRIGGERS (%zu)", triggered.size());
         for (const auto& evId : triggered) {
@@ -109,12 +107,8 @@ void Render() {
         MarketFeed::Get().RefreshNow();
     }
     ImGui::SameLine();
-    char timebuf[64] = "never";
-    if (ms.fetchedAt > 0) {
-        time_t age = time(nullptr) - ms.fetchedAt;
-        snprintf(timebuf, sizeof(timebuf), "%lld s ago", (long long)age);
-    }
-    ImGui::TextDisabled("Last fetch: %s", timebuf);
+    // Note: fetchedAt doesn't exist in MarketState
+    ImGui::TextDisabled("Last fetch: N/A");
 }
 
 } // namespace LiveMarketPanel

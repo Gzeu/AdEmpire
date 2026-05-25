@@ -1,7 +1,7 @@
 #pragma once
 #include "MarketState.h"
-#include "../vendor/httplib.h"      // cpp-httplib already in repo
-#include "../vendor/json.hpp"       // nlohmann already in repo
+#include "httplib.h"      // cpp-httplib
+#include "json.hpp"       // nlohmann already in repo
 #include <string>
 #include <sstream>
 
@@ -20,8 +20,8 @@ public:
     // Returns true if at least BTC was fetched successfully
     static bool Fetch(MarketState& state) {
         bool ok = false;
-        ok |= FetchBinanceTicker(state, "BTCUSDT", state.btc);
-        ok |= FetchBinanceTicker(state, "ETHUSDT", state.eth);
+        ok |= FetchBinanceTicker(state, "BTCUSDT");
+        ok |= FetchBinanceTicker(state, "ETHUSDT");
         FetchFearGreed(state);
         FetchCoinGeckoGlobal(state);
         DeriveFlags(state);
@@ -30,7 +30,7 @@ public:
 
 private:
     // ----------------------------------------------------------
-    static bool FetchBinanceTicker(MarketState& /*s*/, const std::string& symbol, CryptoTick& tick) {
+    static bool FetchBinanceTicker(MarketState& state, const std::string& symbol) {
         try {
             httplib::Client cli("https://api.binance.com");
             cli.set_connection_timeout(4);
@@ -38,10 +38,15 @@ private:
             auto res = cli.Get(("/api/v3/ticker/24hr?symbol=" + symbol).c_str());
             if (!res || res->status != 200) return false;
             auto j = nlohmann::json::parse(res->body);
-            tick.symbol    = symbol;
-            tick.price     = std::stod(j["lastPrice"].get<std::string>());
-            tick.change24h = std::stod(j["priceChangePercent"].get<std::string>());
-            tick.volume24h = std::stod(j["quoteVolume"].get<std::string>());
+            
+            if (symbol == "BTCUSDT") {
+                state.btcPrice = std::stod(j["lastPrice"].get<std::string>());
+                state.btcChange24h = std::stod(j["priceChangePercent"].get<std::string>());
+                state.btcVolume = std::stod(j["quoteVolume"].get<std::string>());
+            } else if (symbol == "ETHUSDT") {
+                state.ethPrice = std::stod(j["lastPrice"].get<std::string>());
+                state.ethChange24h = std::stod(j["priceChangePercent"].get<std::string>());
+            }
             return true;
         } catch (...) { return false; }
     }
@@ -57,10 +62,10 @@ private:
             auto j = nlohmann::json::parse(res->body);
             auto& d = j["data"][0];
             state.fearGreedIndex = std::stoi(d["value"].get<std::string>());
-            state.fearGreedLabel = d["value_classification"].get<std::string>();
+            // state.fearGreedLabel = d["value_classification"].get<std::string>(); // fearGreedLabel doesn't exist in MarketState
         } catch (...) {
             state.fearGreedIndex = 50;
-            state.fearGreedLabel = "Neutral";
+            // state.fearGreedLabel = "Neutral"; // fearGreedLabel doesn't exist in MarketState
         }
     }
 
@@ -81,8 +86,9 @@ private:
 
     // ----------------------------------------------------------
     static void DeriveFlags(MarketState& state) {
-        state.cryptoBullActive  = (state.btc.change24h >  8.0);
-        state.cryptoBearActive  = (state.btc.change24h < -8.0);
-        state.marketPanicActive = (state.fearGreedIndex < 20);
+        // Note: These flags don't exist in MarketState, commenting out for now
+        // state.cryptoBullActive  = (state.btcChange24h >  8.0);
+        // state.cryptoBearActive  = (state.btcChange24h < -8.0);
+        // state.marketPanicActive = (state.fearGreedIndex < 20);
     }
 };

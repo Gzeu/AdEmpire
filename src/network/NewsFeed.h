@@ -16,11 +16,9 @@
 //  Thread-safe singleton with 10-minute refresh.
 // ============================================================
 
-#if __has_include("../vendor/httplib/httplib.h")
-  #include "../vendor/httplib/httplib.h"
-  #define NF_HAS_HTTP 1
-#elif __has_include("httplib.h")
+#if __has_include("httplib.h")
   #include "httplib.h"
+  #define NF_HAS_HTTP 1
   #define NF_HAS_HTTP 1
 #else
   #define NF_HAS_HTTP 0
@@ -121,7 +119,7 @@ private:
 #if NF_HAS_HTTP
         // 1. CoinDesk RSS
         {
-            httplib::SSLClient cli("www.coindesk.com");
+            httplib::Client cli("http://www.coindesk.com");
             cli.set_connection_timeout(4);
             cli.set_read_timeout(5);
             auto res = cli.Get("/arc/outboundfeeds/rss/");
@@ -133,7 +131,7 @@ private:
         }
         // 2. Reddit RSS — r/marketing
         {
-            httplib::SSLClient cli("www.reddit.com");
+            httplib::Client cli("http://www.reddit.com");
             cli.set_connection_timeout(4);
             cli.set_read_timeout(5);
             cli.set_default_headers({{"User-Agent", "AdEmpire/1.0"}});

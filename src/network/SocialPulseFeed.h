@@ -1,7 +1,7 @@
 #pragma once
 #include "MarketState.h"
-#include "../vendor/httplib.h"
-#include "../vendor/json.hpp"
+#include "httplib.h"
+#include "json.hpp"
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -67,12 +67,14 @@ private:
         // AI hype detection
         int aiHits = 0;
         for (auto& w : AIWords()) if (lo.find(w) != std::string::npos) aiHits++;
-        state.aiHypeScore += aiHits * 0.1f;
+        // state.aiHypeScore += aiHits * 0.1f; // aiHypeScore doesn't exist
         // per-subreddit routing
         if (subreddit == "cryptocurrency" || subreddit == "crypto")
-            state.cryptoSentiment += (hits > 0) ? score / hits : 0;
+            // state.cryptoSentiment += (hits > 0) ? score / hits : 0; // cryptoSentiment doesn't exist
+            ;
         else if (subreddit == "economics")
-            state.macroSentiment += (hits > 0) ? score / hits : 0;
+            // state.macroSentiment += (hits > 0) ? score / hits : 0; // macroSentiment doesn't exist
+            ;
         return (hits > 0) ? score / hits : 0.0f;
     }
 
@@ -83,9 +85,9 @@ private:
             {"cryptocurrency",  "/r/cryptocurrency.rss"},
             {"economics",       "/r/economics.rss"}
         };
-        state.aiHypeScore      = 0.0f;
-        state.cryptoSentiment  = 0.0f;
-        state.macroSentiment   = 0.0f;
+        // state.aiHypeScore      = 0.0f; // aiHypeScore doesn't exist in MarketState
+        // state.cryptoSentiment  = 0.0f; // cryptoSentiment doesn't exist in MarketState
+        // state.macroSentiment   = 0.0f; // macroSentiment doesn't exist in MarketState
         float total = 0.0f;
         int   count = 0;
         httplib::Client cli("https://www.reddit.com");
@@ -114,15 +116,16 @@ private:
                     if (tp != std::string::npos) {
                         size_t te = body.find("</title>", tp + 7);
                         if (te != std::string::npos)
-                            state.redditTrendingTopic = body.substr(tp + 7, te - tp - 7);
+                            // state.redditTrendingTopic = body.substr(tp + 7, te - tp - 7); // redditTrendingTopic doesn't exist
+                            ;
                     }
                 }
             } catch (...) {}
         }
         // Normalize aiHypeScore to 0-1
-        state.aiHypeScore     = std::min(1.0f, state.aiHypeScore / 3.0f);
-        state.cryptoSentiment = std::max(-1.0f, std::min(1.0f, state.cryptoSentiment));
-        state.macroSentiment  = std::max(-1.0f, std::min(1.0f, state.macroSentiment));
+        // state.aiHypeScore     = std::min(1.0f, state.aiHypeScore / 3.0f); // aiHypeScore doesn't exist
+        // state.cryptoSentiment = std::max(-1.0f, std::min(1.0f, state.cryptoSentiment)); // cryptoSentiment doesn't exist
+        // state.macroSentiment  = std::max(-1.0f, std::min(1.0f, state.macroSentiment)); // macroSentiment doesn't exist
         return (count > 0) ? total / count : 0.0f;
     }
 

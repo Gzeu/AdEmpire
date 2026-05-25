@@ -1,7 +1,7 @@
 #pragma once
 #include "MarketState.h"
-#include "../vendor/httplib.h"
-#include "../vendor/json.hpp"
+#include "httplib.h"
+#include "json.hpp"
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -60,17 +60,17 @@ private:
             cli.set_connection_timeout(5); cli.set_read_timeout(5);
             auto res = cli.Get("/latest?base=USD&symbols=EUR,RON");
             if (!res || res->status != 200) {
-                state.eurUsd = 1.08; state.ronUsd = 0.22; return;
+                state.eurUsd = 1.08; state.usdRon = 4.67; return;
             }
             auto j = nlohmann::json::parse(res->body);
             auto& rates = j["rates"];
             double eur = rates.contains("EUR") ? rates["EUR"].get<double>() : 0.925;
             double ron = rates.contains("RON") ? rates["RON"].get<double>() : 4.55;
             state.eurUsd = 1.0 / eur;   // USD per EUR
-            state.ronUsd = 1.0 / ron;   // USD per RON
+            state.usdRon = ron;   // RON per USD
         } catch (...) {
             state.eurUsd = 1.08;
-            state.ronUsd = 0.22;
+            state.usdRon = 4.67;
         }
     }
 
@@ -81,19 +81,19 @@ private:
         score += (state.fearGreedIndex - 50) / 200.0f;  // -0.25 to +0.25
         // News sentiment contribution
         score += state.newsSentiment * 0.15f;            // -0.15 to +0.15
-        // Crypto panic penalty
-        if (state.marketPanicActive)  score -= 0.20f;
-        if (state.cryptoBearActive)   score -= 0.15f;
-        if (state.cryptoBullActive)   score += 0.10f;
+        // Crypto panic penalty - these flags don't exist in MarketState
+        // if (state.marketPanicActive)  score -= 0.20f;
+        // if (state.cryptoBearActive)   score -= 0.15f;
+        // if (state.cryptoBullActive)   score += 0.10f;
         // AI hype bonus — tech advertising demand spikes
-        if (state.aiHypeActive)       score += 0.12f;
+        // if (state.aiHypeActive)       score += 0.12f;
         state.adMarketHealth   = std::max(0.5f, std::min(1.5f, score));
         // Volatility: how much events are amplified
-        float vol = std::abs(state.btc.change24h) / 20.0f
+        float vol = std::abs(state.btcChange24h) / 20.0f
                   + (1.0f - state.fearGreedIndex / 100.0f) * 0.3f
                   + std::abs(state.newsSentiment) * 0.2f;
         state.globalVolatility = std::max(0.0f, std::min(1.0f, vol));
-        // Composite flags
-        state.techBoomActive = state.aiHypeActive && state.cryptoBullActive;
+        // Composite flags - these don't exist in MarketState
+        // state.techBoomActive = state.aiHypeActive && state.cryptoBullActive;
     }
 };

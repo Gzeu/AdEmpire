@@ -47,6 +47,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
+# cpp-httplib — download automatically if not present
+FetchContent_Declare(
+    cpp_httplib
+    URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.15.3.tar.gz
+)
+FetchContent_MakeAvailable(cpp_httplib)
+
 # Dear ImGui (git submodule at extern/imgui)
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/extern/imgui)
 if(NOT EXISTS ${IMGUI_DIR}/imgui.h)
@@ -88,6 +95,7 @@ target_include_directories(AdEmpire PRIVATE
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${nlohmann_json_SOURCE_DIR}
+    ${cpp_httplib_SOURCE_DIR}
 )
 
 # ── Link libraries ────────────────────────────────────────────────────────────
