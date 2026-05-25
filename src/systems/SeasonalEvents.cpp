@@ -1,37 +1,46 @@
 #include "SeasonalEvents.h"
+#include "ToastSystem.h"
+#include <unordered_map>
 
-// month -> {social, seo, email, influencer, pr, paidSearch, label}
-static const SeasonalModifiers SEASONS[13] = {
-    {1,1,1,1,1,1,"Neutral"},             // 0 unused
-    {0.85f,1.0f,0.9f,0.8f,1.0f,0.9f,  "January Slowdown"},
-    {0.9f, 1.0f,1.0f,0.9f,1.0f,0.95f, "February Steady"},
-    {1.0f, 1.1f,1.0f,1.0f,1.1f,1.0f,  "March Spring Push"},
-    {1.05f,1.1f,1.1f,1.05f,1.0f,1.0f, "April Growth"},
-    {1.0f, 1.0f,1.0f,1.0f,1.0f,1.0f,  "May Neutral"},
-    {0.95f,0.9f,0.9f,0.9f,0.9f,0.9f,  "June Summer Dip"},
-    {0.80f,0.85f,0.85f,0.85f,0.85f,0.80f, "July Summer Slump −20%"},
-    {0.9f, 1.0f,1.0f,0.9f,0.9f,0.9f,  "August Recovery"},
-    {1.05f,1.1f,1.05f,1.0f,1.0f,1.1f, "September Back-to-Work"},
-    {1.1f, 1.1f,1.1f,1.1f,1.1f,1.1f,  "October Q4 Warmup"},
-    {1.60f,1.3f,1.5f,1.6f,1.3f,1.7f,  "November Black Friday +60%"},
-    {1.80f,1.2f,1.6f,1.8f,1.4f,1.9f,  "December Christmas +80%"},
+struct SeasonMod {
+    float social, seo, email, influencer, pr, paid;
+    const char* note;
 };
 
-SeasonalModifiers SeasonalEvents::GetForMonth(int month) {
-    if (month < 1 || month > 12) return SEASONS[0];
-    return SEASONS[month];
-}
-
-const char* SeasonalEvents::GetSeasonLabel(int month) {
-    return GetForMonth(month).description;
-}
+// Month 1..12 -> modifiers (multiplicative on top of event mods)
+static const SeasonMod SEASON[13] = {
+    {1,1,1,1,1,1,""},                              // placeholder [0]
+    {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,"January — steady market"},
+    {1.05f,1.0f,1.05f,1.0f,1.0f,1.05f,"February — Valentine boost +5%"},
+    {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,"March — baseline"},
+    {1.05f,1.05f,1.0f,1.0f,1.0f,1.05f,"April — Spring uptick"},
+    {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,"May — stable"},
+    {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,"June — stable"},
+    {0.8f,0.9f,0.85f,0.9f,0.85f,0.8f,"July — Summer Slump \u22120%"},
+    {0.9f,0.95f,0.9f,0.95f,0.9f,0.9f,"August — slow recovery"},
+    {1.05f,1.05f,1.0f,1.0f,1.05f,1.05f,"September — Back to school boost"},
+    {1.1f,1.05f,1.1f,1.05f,1.05f,1.1f,"October — Q4 ramp-up"},
+    {1.6f,1.1f,1.3f,1.4f,1.1f,1.7f,"November — Black Friday season"},
+    {1.8f,1.1f,1.6f,1.5f,1.2f,1.9f,"December — Holiday peak"},
+};
 
 void SeasonalEvents::Apply(GameState& gs) {
-    auto s = GetForMonth(gs.month);
+    if (gs.month < 1 || gs.month > 12) return;
+    const SeasonMod& s = SEASON[gs.month];
+    // Multiply onto existing channel modifiers (initialised each month in Simulation)
     gs.channelModifiers[ChannelType::Social]     *= s.social;
     gs.channelModifiers[ChannelType::SEO]        *= s.seo;
     gs.channelModifiers[ChannelType::Email]      *= s.email;
     gs.channelModifiers[ChannelType::Influencer] *= s.influencer;
     gs.channelModifiers[ChannelType::PR]         *= s.pr;
-    gs.channelModifiers[ChannelType::PaidSearch] *= s.paidSearch;
+    gs.channelModifiers[ChannelType::PaidSearch] *= s.paid;
+    // Notify player about extreme months
+    if (gs.month == 7)  TOAST_WARN("Summer Slump! All channels -15 to -20%");
+    if (gs.month == 11) TOAST_SUCCESS("Black Friday season! Social +60%, Paid +70%");
+    if (gs.month == 12) TOAST_SUCCESS("Holiday Peak! Social +80%, Paid +90%");
+}
+
+const char* SeasonalEvents::GetNote(int month) {
+    if (month < 1 || month > 12) return "";
+    return SEASON[month].note;
 }

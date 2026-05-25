@@ -1,6 +1,6 @@
 #include "AchievementsPanel.h"
-#include "../systems/AchievementSystem.h"
 #include "imgui.h"
+#include <cstdio>
 
 void AchievementsPanel::Render(GameState& gs) {
     if (!gs.showAchievements) return;
@@ -9,43 +9,33 @@ void AchievementsPanel::Render(GameState& gs) {
     ImGui::Begin("Achievements", &gs.showAchievements,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    int unlocked = AchievementSystem::UnlockedCount();
-    int total    = (int)AchievementSystem::All().size();
-    char prog[32]; snprintf(prog, 32, "%d / %d", unlocked, total);
-    ImGui::Text("Progress:");
-    ImGui::SameLine();
-    ImGui::ProgressBar((float)unlocked / total, ImVec2(300, 18), prog);
+    int total    = (int)gs.achievements.size();
+    int unlocked = 0;
+    for (auto& a : gs.achievements) if (a.unlocked) unlocked++;
+
+    ImGui::Text("Unlocked: %d / %d", unlocked, total);
+    char prog[32]; snprintf(prog, 32, "%d/%d", unlocked, total);
+    ImGui::ProgressBar((float)unlocked / (float)(total ? total : 1),
+        ImVec2(-1, 14), prog);
     ImGui::Separator();
     ImGui::Spacing();
 
-    auto& all = AchievementSystem::All();
-    int cols = 2;
-    if (ImGui::BeginTable("##ach", cols, ImGuiTableFlags_None)) {
-        for (int i = 0; i < (int)all.size(); i++) {
+    // Two-column grid
+    if (ImGui::BeginTable("##ach", 2, ImGuiTableFlags_None)) {
+        for (auto& a : gs.achievements) {
             ImGui::TableNextColumn();
-            auto& a = all[i];
-            ImGui::PushID(i);
-            ImGui::BeginGroup();
-
-            // Icon + title
-            if (a.unlocked)
-                ImGui::TextColored(ImVec4(1.f,0.85f,0.1f,1.f), "%s %s", a.icon.c_str(), a.title.c_str());
-            else
-                ImGui::TextDisabled("🔒 %s", a.title.c_str());
-
-            // Description
-            if (a.unlocked) {
-                ImGui::TextWrapped("%s", a.description.c_str());
-                if (a.monthUnlocked >= 0)
-                    ImGui::TextColored(ImVec4(0.5f,0.9f,0.5f,1.f),
-                        "Unlocked month %d", a.monthUnlocked);
-            } else {
-                ImGui::TextDisabled("%s", a.description.c_str());
-            }
-
-            ImGui::EndGroup();
-            ImGui::PopID();
-            ImGui::Spacing();
+            ImVec4 col = a.unlocked
+                ? ImVec4(0.3f,1.f,0.4f,1.f)
+                : ImVec4(0.4f,0.4f,0.4f,1.f);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg,
+                a.unlocked ? ImVec4(0.08f,0.18f,0.10f,0.9f)
+                           : ImVec4(0.08f,0.08f,0.12f,0.9f));
+            ImGui::BeginChild(a.id.c_str(), ImVec2(-1, 64), true);
+            ImGui::TextColored(col, "%s  %s",
+                a.unlocked ? "\u2705" : "\ud83d\udd12", a.name.c_str());
+            ImGui::TextWrapped("%s", a.description.c_str());
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
         }
         ImGui::EndTable();
     }
