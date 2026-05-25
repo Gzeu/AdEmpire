@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include "core/GameState.h"
 #include "core/Simulation.h"
@@ -20,46 +21,45 @@
 #include "ui/StaffPanel.h"
 
 static GameState gs;
-static bool      gameStarted = false;
+static bool      gameStarted      = false;
 static bool      pendingNextMonth = false;
 
 static void glfw_error_callback(int error, const char* desc) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, desc);
 }
 
-void RenderNavbar() {
+static void RenderNavbar() {
+    ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2((float)1280, 40), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, 40), ImGuiCond_Always);
     ImGui::Begin("##navbar", nullptr,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBringToFrontOnFocus);
+        ImGuiWindowFlags_NoScrollbar  | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    ImGui::SetWindowFontScale(0.95f);
     if (ImGui::Button(" Dashboard "))  { gs.showDashboard=true; gs.showCampaigns=false; gs.showClients=false; gs.showStaff=false; gs.showMarketMap=false; gs.showNewsfeed=false; }
     ImGui::SameLine();
-    if (ImGui::Button(" Campaigns  ")) { gs.showCampaigns=true;  gs.showClients=false; gs.showStaff=false; gs.showMarketMap=false; gs.showNewsfeed=false; }
+    if (ImGui::Button(" Campaigns "))  { gs.showCampaigns=true; gs.showClients=false; gs.showStaff=false; gs.showMarketMap=false; gs.showNewsfeed=false; }
     ImGui::SameLine();
-    if (ImGui::Button("  Clients   ")) { gs.showClients=true;    gs.showCampaigns=false; gs.showStaff=false; gs.showMarketMap=false; gs.showNewsfeed=false; }
+    if (ImGui::Button("  Clients  "))  { gs.showClients=true; gs.showCampaigns=false; gs.showStaff=false; gs.showMarketMap=false; gs.showNewsfeed=false; }
     ImGui::SameLine();
-    if (ImGui::Button("   Staff    ")) { gs.showStaff=true;      gs.showCampaigns=false; gs.showClients=false; gs.showMarketMap=false; gs.showNewsfeed=false; }
+    if (ImGui::Button("   Staff   "))  { gs.showStaff=true; gs.showCampaigns=false; gs.showClients=false; gs.showMarketMap=false; gs.showNewsfeed=false; }
     ImGui::SameLine();
-    if (ImGui::Button(" Market Map ")) { gs.showMarketMap=true;  gs.showCampaigns=false; gs.showClients=false; gs.showStaff=false; gs.showNewsfeed=false; }
+    if (ImGui::Button(" Market Map ")) { gs.showMarketMap=true; gs.showCampaigns=false; gs.showClients=false; gs.showStaff=false; gs.showNewsfeed=false; }
     ImGui::SameLine();
-    if (ImGui::Button(" Newsfeed   ")) { gs.showNewsfeed=true;   gs.showCampaigns=false; gs.showClients=false; gs.showStaff=false; gs.showMarketMap=false; }
-    ImGui::SameLine(0, 40);
+    if (ImGui::Button(" Newsfeed  "))  { gs.showNewsfeed=true; gs.showCampaigns=false; gs.showClients=false; gs.showStaff=false; gs.showMarketMap=false; }
+    ImGui::SameLine(0, 24);
 
     ImGui::TextColored(ImVec4(0.3f,1.f,0.5f,1.f),
         "$%.0f | Mo %d/%d | Share %.1f%%",
         gs.budget, gs.month, gs.year, gs.playerMarketShare);
-    ImGui::SameLine(0, 30);
-
+    ImGui::SameLine(0, 20);
     if (ImGui::Button(" Next Month >> ")) pendingNextMonth = true;
     ImGui::SameLine();
     if (ImGui::Button(" Save ")) SaveSystem::Save(gs);
     ImGui::End();
 }
 
-void RenderGame() {
+static void RenderGame() {
     RenderNavbar();
     Dashboard::Render(gs);
     CampaignEditor::Render(gs);
@@ -68,30 +68,33 @@ void RenderGame() {
     Newsfeed::Render(gs);
     StaffPanel::Render(gs);
 
-    // Win / lose overlays
     if (gs.victory) {
         ImVec2 c = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f,0.5f));
         ImGui::SetNextWindowSize(ImVec2(400,200));
-        ImGui::Begin("VICTORY", nullptr, ImGuiWindowFlags_NoDecoration);
+        ImGui::Begin("##victory", nullptr, ImGuiWindowFlags_NoDecoration);
         ImGui::SetWindowFontScale(2.f);
         ImGui::TextColored(ImVec4(0.3f,1.f,0.4f,1.f), "  VICTORY!");
         ImGui::SetWindowFontScale(1.f);
-        ImGui::Text("You reached 35%% market share!");
+        ImGui::Text("You reached 35%%%% market share!");
         ImGui::Text("Total Revenue: $%.0f", gs.stats.totalRevenue);
-        if (ImGui::Button("Play Again", ImVec2(-1,40))) { gs=GameState(); gameStarted=false; MainMenu::s_showMenu=true; }
+        if (ImGui::Button("Play Again", ImVec2(-1,40))) {
+            gs = GameState(); gameStarted = false; MainMenu::s_showMenu = true;
+        }
         ImGui::End();
     }
     if (gs.gameOver) {
         ImVec2 c = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f,0.5f));
         ImGui::SetNextWindowSize(ImVec2(400,200));
-        ImGui::Begin("GAME OVER", nullptr, ImGuiWindowFlags_NoDecoration);
+        ImGui::Begin("##gameover", nullptr, ImGuiWindowFlags_NoDecoration);
         ImGui::SetWindowFontScale(2.f);
         ImGui::TextColored(ImVec4(1.f,0.3f,0.3f,1.f), "  GAME OVER");
         ImGui::SetWindowFontScale(1.f);
         ImGui::Text("Agency went bankrupt (< -$50,000)");
-        if (ImGui::Button("Try Again", ImVec2(-1,40))) { gs=GameState(); gameStarted=false; MainMenu::s_showMenu=true; }
+        if (ImGui::Button("Try Again", ImVec2(-1,40))) {
+            gs = GameState(); gameStarted = false; MainMenu::s_showMenu = true;
+        }
         ImGui::End();
     }
 }
@@ -103,9 +106,13 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
 
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "AdEmpire — Marketing Tycoon", nullptr, nullptr);
-    if (!window) return -1;
+    GLFWwindow* window = glfwCreateWindow(1280, 720,
+        "AdEmpire - Marketing Tycoon", nullptr, nullptr);
+    if (!window) { glfwTerminate(); return -1; }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 

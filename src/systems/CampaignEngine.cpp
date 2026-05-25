@@ -3,9 +3,9 @@
 #include <algorithm>
 
 float CampaignEngine::CalcQualityScore(const Campaign& c, const GameState& gs) {
-    float score = 5.0f; // base
-    for (auto& s : gs.staff)
-        if ((int)s.role == (int)c.channel)
+    float score = 5.0f;
+    for (const auto& s : gs.staff)
+        if (static_cast<int>(s.role) == static_cast<int>(c.channel))
             score += s.skill * 3.0f;
     score += gs.stats.reputation * 0.03f;
     return std::clamp(score, 0.f, 10.f);
@@ -28,16 +28,10 @@ Campaign CampaignEngine::CreateCampaign(
     c.active         = true;
     c.completed      = false;
     c.qualityScore   = CalcQualityScore(c, gs);
-    c.reach          = 0;
-    c.ctr            = 0;
-    c.conversionRate = 0;
-    c.revenue        = 0;
-    c.agencyFee      = 0;
     return c;
 }
 
 float CampaignEngine::EstimateROI(const Campaign& c, const GameState& gs) {
-    float rev = Simulation::CalcRevenue(c, gs);
-    if (c.budget <= 0) return 0.f;
-    return ((rev * 0.15f) / c.budget) * 100.f;
+    if (c.budget <= 0.f) return 0.f;
+    return (Simulation::CalcRevenue(c, gs) * 0.15f / c.budget) * 100.f;
 }

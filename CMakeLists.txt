@@ -4,11 +4,9 @@ project(AdEmpire VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find packages
 find_package(OpenGL REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 
-# ImGui sources
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/lib/imgui)
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
@@ -20,7 +18,6 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-# Game sources
 file(GLOB_RECURSE GAME_SOURCES
     src/*.cpp
     src/**/*.cpp
@@ -43,7 +40,12 @@ target_link_libraries(AdEmpire PRIVATE
     ${CMAKE_DL_LIBS}
 )
 
-# Copy assets to build directory
+if(MSVC)
+    target_compile_options(AdEmpire PRIVATE /W3)
+else()
+    target_compile_options(AdEmpire PRIVATE -Wall -Wextra -Wno-unused-parameter)
+endif()
+
 add_custom_command(TARGET AdEmpire POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:AdEmpire>/assets

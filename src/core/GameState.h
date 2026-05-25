@@ -3,43 +3,34 @@
 #include <vector>
 #include <unordered_map>
 
-// ─── Channel Types ───────────────────────────────────────────────
 enum class ChannelType {
-    Social,
-    SEO,
-    Email,
-    Influencer,
-    PR,
-    PaidSearch
+    Social = 0, SEO, Email, Influencer, PR, PaidSearch
 };
 
 static const char* ChannelNames[] = {
     "Social Media", "SEO", "Email", "Influencer", "PR", "Paid Search"
 };
 
-// ─── Campaign ────────────────────────────────────────────────────
 struct Campaign {
-    int         id;
+    int         id             = 0;
     std::string name;
-    int         clientId;
-    ChannelType channel;
-    float       budget;       // $ allocated
-    float       reach;        // people reached
-    float       ctr;          // click-through rate 0-1
-    float       conversionRate;
-    float       revenue;      // generated for client
-    float       agencyFee;    // 15% of revenue
-    int         durationMonths;
-    int         monthsLeft;
-    bool        active;
-    bool        completed;
-    // Performance modifiers
-    float       qualityScore; // 0-10, affects results
+    int         clientId       = 0;
+    ChannelType channel        = ChannelType::Social;
+    float       budget         = 0.f;
+    float       reach          = 0.f;
+    float       ctr            = 0.f;
+    float       conversionRate = 0.f;
+    float       revenue        = 0.f;
+    float       agencyFee      = 0.f;
+    int         durationMonths = 1;
+    int         monthsLeft     = 1;
+    bool        active         = false;
+    bool        completed      = false;
+    float       qualityScore   = 5.f;
 };
 
-// ─── Client ──────────────────────────────────────────────────────
 enum class ClientIndustry {
-    Food, Fashion, Tech, Finance, Health, Education, Retail, Gaming
+    Food = 0, Fashion, Tech, Finance, Health, Education, Retail, Gaming
 };
 
 static const char* IndustryNames[] = {
@@ -48,26 +39,21 @@ static const char* IndustryNames[] = {
 };
 
 struct Client {
-    int           id;
-    std::string   name;
-    ClientIndustry industry;
-    float         budget;          // monthly ad budget
-    float         satisfaction;    // 0-100
-    int           contractMonths;  // remaining months
-    bool          active;
-    bool          available;       // can be pitched to
+    int            id             = 0;
+    std::string    name;
+    ClientIndustry industry       = ClientIndustry::Tech;
+    float          budget         = 0.f;
+    float          satisfaction   = 70.f;
+    int            contractMonths = 6;
+    bool           active         = false;
+    bool           available      = true;
     std::vector<int> campaignIds;
-    float         totalRevenue;    // historical revenue
+    float          totalRevenue   = 0.f;
 };
 
-// ─── Staff Member ────────────────────────────────────────────────
 enum class StaffRole {
-    SocialMediaManager,
-    SEOSpecialist,
-    ContentCreator,
-    PRManager,
-    DataAnalyst,
-    AccountManager
+    SocialMediaManager = 0, SEOSpecialist, ContentCreator,
+    PRManager, DataAnalyst, AccountManager
 };
 
 static const char* RoleNames[] = {
@@ -75,102 +61,94 @@ static const char* RoleNames[] = {
     "PR Manager", "Data Analyst", "Account Manager"
 };
 
-static const float RoleSalaries[] = {
-    3500.f, 4500.f, 3000.f, 5000.f, 6000.f, 4000.f
-};
-
-static const float RoleBonus[] = {
-    0.15f, 0.20f, 0.10f, 0.25f, 0.30f, 0.15f
-};
+static const float RoleSalaries[] = { 3500.f, 4500.f, 3000.f, 5000.f, 6000.f, 4000.f };
+static const float RoleBonus[]    = { 0.15f, 0.20f, 0.10f, 0.25f, 0.30f, 0.15f };
 
 struct StaffMember {
-    int         id;
+    int         id          = 0;
     std::string name;
-    StaffRole   role;
-    float       salary;
-    float       skill;     // 0-1, affects campaign quality
-    int         monthsHired;
+    StaffRole   role        = StaffRole::SocialMediaManager;
+    float       salary      = 0.f;
+    float       skill       = 0.5f;
+    int         monthsHired = 0;
 };
 
-// ─── AI Competitor ───────────────────────────────────────────────
 struct AIAgency {
     std::string name;
-    float       marketShare;   // 0-100 %
-    float       budget;
-    float       reputation;    // 0-100
-    float       aggressiveness; // 0-1, how often they poach clients
-    int         clientCount;
-    std::string strategy;      // "premium", "volume", "niche"
+    float       marketShare    = 10.f;
+    float       budget         = 30000.f;
+    float       reputation     = 60.f;
+    float       aggressiveness = 0.5f;
+    int         clientCount    = 2;
+    std::string strategy       = "volume";
 };
 
-// ─── News Event ──────────────────────────────────────────────────
 struct NewsEvent {
     std::string title;
     std::string description;
-    std::string impact;       // human-readable impact
-    float       socialMod;    // multiplier on social campaigns
-    float       seoMod;
-    float       emailMod;
-    float       influencerMod;
-    float       prMod;
-    float       paidMod;
-    float       budgetImpact; // +/- flat on player budget
-    int         durationMonths;
-    bool        active;
-    int         monthsLeft;
+    std::string impact;
+    float socialMod     = 1.f;
+    float seoMod        = 1.f;
+    float emailMod      = 1.f;
+    float influencerMod = 1.f;
+    float prMod         = 1.f;
+    float paidMod       = 1.f;
+    float budgetImpact  = 0.f;
+    int   durationMonths = 1;
+    bool  active        = false;
+    int   monthsLeft    = 0;
 };
 
-// ─── Agency Stats (player) ───────────────────────────────────────
 struct AgencyStats {
-    float totalRevenue;
-    float totalSpent;
-    int   campaignsCompleted;
-    int   clientsAcquired;
-    int   clientsLost;
-    int   monthsPlayed;
-    float bestMonthRevenue;
-    float reputation;  // 0-100, grows with success
+    float totalRevenue       = 0.f;
+    float totalSpent         = 0.f;
+    int   campaignsCompleted = 0;
+    int   clientsAcquired    = 0;
+    int   clientsLost        = 0;
+    int   monthsPlayed       = 0;
+    float bestMonthRevenue   = 0.f;
+    float reputation         = 20.f;
 };
 
-// ─── Main Game State ─────────────────────────────────────────────
 struct GameState {
-    // Agency info
-    std::string agencyName = "My Agency";
-    float       budget     = 10000.f;
+    std::string agencyName      = "My Agency";
+    float       budget          = 10000.f;
     float       monthlyRevenue  = 0.f;
     float       monthlyExpenses = 0.f;
-    int         month = 1;
-    int         year  = 2024;
+    int         month           = 1;
+    int         year            = 2024;
 
-    // Collections
     std::vector<Client>      clients;
     std::vector<Campaign>    campaigns;
     std::vector<StaffMember> staff;
     std::vector<AIAgency>    competitors;
     std::vector<NewsEvent>   activeEvents;
 
-    // Channel modifiers (affected by events)
     std::unordered_map<ChannelType, float> channelModifiers;
 
-    // Stats
     AgencyStats stats;
 
-    // UI state flags
-    bool showDashboard    = true;
-    bool showCampaigns    = false;
-    bool showClients      = false;
-    bool showStaff        = false;
-    bool showMarketMap    = false;
-    bool showNewsfeed     = false;
-    bool showSettings     = false;
-    bool gameOver         = false;
-    bool victory          = false;
+    bool showDashboard = true;
+    bool showCampaigns = false;
+    bool showClients   = false;
+    bool showStaff     = false;
+    bool showMarketMap = false;
+    bool showNewsfeed  = false;
+    bool showSettings  = false;
+    bool gameOver      = false;
+    bool victory       = false;
 
-    // Market share
-    float playerMarketShare = 2.f; // start at 2%
-
-    // Next IDs
-    int nextClientId   = 1;
-    int nextCampaignId = 1;
-    int nextStaffId    = 1;
+    float playerMarketShare = 2.f;
+    int   nextClientId      = 1;
+    int   nextCampaignId    = 1;
+    int   nextStaffId       = 1;
 };
+
+// std::hash specialization so ChannelType works in unordered_map
+namespace std {
+    template<> struct hash<ChannelType> {
+        size_t operator()(ChannelType c) const noexcept {
+            return hash<int>{}(static_cast<int>(c));
+        }
+    };
+}
