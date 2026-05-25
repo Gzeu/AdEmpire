@@ -96,7 +96,7 @@ private:
         MarketState fresh = MarketState::Neutral();
 
         bool cryptoOk = CryptoFeed::Fetch(fresh);  // BTC/ETH + Fear&Greed
-        NewsFeed::Get().FetchAsync();              // Bug fix #1: now wired in
+        NewsFeed::Fetch(fresh);                    // Bug fix #1: now wired in
         TrendFeed::Fetch(fresh);                   // HackerNews sentiment
         FXFeed::Fetch(fresh);                      // EUR/USD/RON
         SocialPulseFeed::Fetch(fresh);              // Reddit + social pulse

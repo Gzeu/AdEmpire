@@ -40,7 +40,8 @@ struct Campaign {
     float       qualityScore;
 };
 
-// ─── Client ────────────────────────────────────────────────────────────────────────────nenum class ContractType {
+// ─── Client ────────────────────────────────────────────────────────────────────────────
+enum class ContractType {
     Monthly, Quarterly, Annual
 };
 
@@ -81,7 +82,8 @@ struct Client {
     int            unlockMonth = 1;
 };
 
-// ─── Staff ─────────────────────────────────────────────────────────────────────────────nenum class StaffRole {
+// ─── Staff ─────────────────────────────────────────────────────────────────────────────
+enum class StaffRole {
     SocialMediaManager, SEOSpecialist, ContentCreator,
     PRManager, DataAnalyst, AccountManager
 };

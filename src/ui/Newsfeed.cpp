@@ -37,7 +37,7 @@ void Newsfeed::Render(GameState& gs) {
 
         if (ImGui::BeginTabItem(" Headlines ")) {
             ImGui::Spacing();
-            const auto& hl = NewsFeed::Get().GetHeadlines();
+            const auto& hl = ms.newsItems;
             if (hl.empty()) {
                 ImGui::TextDisabled("Fetching live headlines...");
             } else {
@@ -46,7 +46,7 @@ void Newsfeed::Render(GameState& gs) {
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.85f, 0.85f, 1.f));
                     ImGui::Bullet();
                     ImGui::SameLine();
-                    ImGui::TextWrapped("%s", hl[i].c_str());
+                    ImGui::TextWrapped("[%s] %s", hl[i].source.c_str(), hl[i].title.c_str());
                     ImGui::PopStyleColor();
                     ImGui::Spacing();
                     ImGui::PopID();
@@ -57,19 +57,26 @@ void Newsfeed::Render(GameState& gs) {
 
         if (ImGui::BeginTabItem(" Reddit ")) {
             ImGui::Spacing();
-            const auto& rh = NewsFeed::Get().GetRedditHeadlines();
-            if (rh.empty()) {
+            int redditCount = 0;
+            for (const auto& item : ms.newsItems) {
+                if (item.source.rfind("r/", 0) == 0) redditCount++;
+            }
+            if (redditCount == 0) {
                 ImGui::TextDisabled("Loading r/marketing + r/digitalmarketing...");
             } else {
-                for (size_t i = 0; i < rh.size(); ++i) {
-                    ImGui::PushID((int)(i + 1000));
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.55f, 0.25f, 1.f));
-                    ImGui::Bullet();
-                    ImGui::SameLine();
-                    ImGui::TextWrapped("%s", rh[i].c_str());
-                    ImGui::PopStyleColor();
-                    ImGui::Spacing();
-                    ImGui::PopID();
+                int idx = 0;
+                for (const auto& item : ms.newsItems) {
+                    if (item.source.rfind("r/", 0) == 0) {
+                        ImGui::PushID((int)(idx + 1000));
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.55f, 0.25f, 1.f));
+                        ImGui::Bullet();
+                        ImGui::SameLine();
+                        ImGui::TextWrapped("[%s] %s", item.source.c_str(), item.title.c_str());
+                        ImGui::PopStyleColor();
+                        ImGui::Spacing();
+                        ImGui::PopID();
+                        idx++;
+                    }
                 }
             }
             ImGui::EndTabItem();
@@ -77,21 +84,28 @@ void Newsfeed::Render(GameState& gs) {
 
         if (ImGui::BeginTabItem(" Hacker News ")) {
             ImGui::Spacing();
-            ImGui::Text("AI Hype Score: %d / 300 pts", NewsFeed::Get().GetAiHypeScore());
+            ImGui::Text("AI Hype Score: %d / 100", ms.aiHypeScore);
             ImGui::Spacing();
-            const auto& hn = NewsFeed::Get().GetHackerNewsHeadlines();
-            if (hn.empty()) {
+            int hnCount = 0;
+            for (const auto& item : ms.newsItems) {
+                if (item.source == "HackerNews") hnCount++;
+            }
+            if (hnCount == 0) {
                 ImGui::TextDisabled("Loading top HN stories...");
             } else {
-                for (size_t i = 0; i < hn.size(); ++i) {
-                    ImGui::PushID((int)(i + 2000));
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.70f, 0.15f, 1.f));
-                    ImGui::Bullet();
-                    ImGui::SameLine();
-                    ImGui::TextWrapped("%s", hn[i].c_str());
-                    ImGui::PopStyleColor();
-                    ImGui::Spacing();
-                    ImGui::PopID();
+                int idx = 0;
+                for (const auto& item : ms.newsItems) {
+                    if (item.source == "HackerNews") {
+                        ImGui::PushID((int)(idx + 2000));
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.70f, 0.15f, 1.f));
+                        ImGui::Bullet();
+                        ImGui::SameLine();
+                        ImGui::TextWrapped("%s", item.title.c_str());
+                        ImGui::PopStyleColor();
+                        ImGui::Spacing();
+                        ImGui::PopID();
+                        idx++;
+                    }
                 }
             }
             ImGui::EndTabItem();

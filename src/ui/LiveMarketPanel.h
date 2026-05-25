@@ -99,26 +99,24 @@ public:
 
     // ── Newsfeed tab ─────────────────────────────────────────────────────────
     static void RenderNewsfeed() {
-        const auto& headlines = NewsFeed::Get().GetHeadlines();
-        // const auto& keywords  = NewsFeed::Get().GetTrendingKeywords(); // GetTrendingKeywords doesn't exist
+        const MarketState& s = MarketFeed::Get().GetState();
+        const auto& headlines = s.newsItems;
+        const auto& keywords = s.trendingKeywords;
 
         // Trending keywords pills
-        // if (!keywords.empty()) { // GetTrendingKeywords doesn't exist
-        //     ImGui::Text("Trending Topics:");
-        //     ImGui::SameLine();
-        //     for (const auto& kw : keywords) {
-        //         ImGui::TextColored(ImVec4(1,0.85f,0.2f,1), "[%s] ", kw.c_str());
-        //         ImGui::SameLine();
-        //     }
-        //     ImGui::NewLine();
-        //     ImGui::Separator();
-        // }
+        if (!keywords.empty()) {
+            ImGui::Text("Trending Topics:");
+            ImGui::SameLine();
+            for (const auto& kw : keywords) {
+                ImGui::TextColored(ImVec4(1,0.85f,0.2f,1), "[%s] ", kw.c_str());
+                ImGui::SameLine();
+            }
+            ImGui::NewLine();
+            ImGui::Separator();
+        }
 
         if (headlines.empty()) {
             ImGui::TextDisabled("No headlines loaded. Check network connection.");
-            if (ImGui::Button("Fetch News")) {
-                NewsFeed::Get().FetchAsync();
-            }
             return;
         }
 
@@ -129,7 +127,7 @@ public:
             ImGui::PushID(idx++);
 
             // Simple headline display
-            ImGui::TextWrapped("%s", h.c_str());
+            ImGui::TextWrapped("[%s] %s", h.source.c_str(), h.title.c_str());
             ImGui::PopID();
         }
         ImGui::EndChild();

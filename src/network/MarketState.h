@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 #include <ctime>
 
 // ============================================================
@@ -7,6 +8,12 @@
 //  Central struct populated by MarketFeed (async).
 //  Read by MarketEventBridge + Dashboard + Newsfeed.
 // ============================================================
+
+struct NewsItem {
+    std::string title;
+    std::string source;
+    std::string link;
+};
 
 struct MarketState {
     // ── Crypto ──────────────────────────────────────────────
@@ -23,8 +30,14 @@ struct MarketState {
     float  usdRon  = 4.6700f;
 
     // ── Sentiment ───────────────────────────────────────────
-    std::string trendingKeyword;   // Wikipedia #1 trending
+    std::vector<std::string> trendingKeywords;   // Wikipedia trending topics
+    std::string trendingKeyword;   // Wikipedia #1 trending (legacy)
     float  newsSentiment = 0.0f;   // -1 bearish → +1 bullish
+    int    aiHypeScore = 0;        // 0-100 AI hype score
+    int    cryptoSentiment = 0;    // 0-100 crypto sentiment
+    int    economicSentiment = 0;  // 0-100 economic sentiment
+    int    trendingScore = 0;      // 0-100 trending virality score
+    std::vector<NewsItem> newsItems;  // Live news headlines
 
     // ── Derived (calculated by MarketFeed) ──────────────────
     float  globalVolatility = 0.0f;  // 0.0 – 1.0
@@ -50,6 +63,10 @@ struct MarketState {
         s.adMarketHealth   = 0.5f;
         s.trendingKeyword  = "";
         s.newsSentiment    = 0.0f;
+        s.aiHypeScore      = 0;
+        s.cryptoSentiment  = 0;
+        s.economicSentiment = 0;
+        s.trendingScore    = 0;
         s.isOffline        = true;
         s.isStale          = true;
         s.fetchedAt        = 0;

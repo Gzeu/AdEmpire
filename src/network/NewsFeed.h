@@ -1,6 +1,7 @@
 #pragma once
 #include "MarketState.h"
 #include "httplib.h"
+#include "json.hpp"
 #include <string>
 #include <vector>
 #include <sstream>
@@ -12,12 +13,6 @@
 //    Hacker News Firebase  — tech/AI news
 //    Reddit RSS r/marketing, r/digitalmarketing
 // ============================================================
-
-struct NewsItem {
-    std::string title;
-    std::string source;
-    std::string link;
-};
 
 class NewsFeed {
 public:
@@ -61,8 +56,13 @@ private:
             cli.enable_server_certificate_verification(true);
             auto res = cli.Get("/arc/outboundfeeds/rss/");
             if (!res || res->status != 200) return;
-            for (auto& t : ExtractTitles(res->body, 4))
-                state.newsItems.push_back({ t, "CoinDesk", "" });
+            for (auto& t : ExtractTitles(res->body, 4)) {
+                NewsItem item;
+                item.title = t;
+                item.source = "CoinDesk";
+                item.link = "";
+                state.newsItems.push_back(item);
+            }
         } catch (...) {}
     }
 
@@ -83,8 +83,13 @@ private:
                 auto sr = cli.Get(path.c_str());
                 if (!sr || sr->status != 200) continue;
                 auto item = nlohmann::json::parse(sr->body);
-                if (item.contains("title"))
-                    state.newsItems.push_back({ item["title"].get<std::string>(), "HackerNews", "" });
+                if (item.contains("title")) {
+                    NewsItem ni;
+                    ni.title = item["title"].get<std::string >();
+                    ni.source = "HackerNews";
+                    ni.link = "";
+                    state.newsItems.push_back(ni);
+                }
                 fetched++;
             }
         } catch (...) {}
@@ -99,8 +104,13 @@ private:
             httplib::Headers headers = {{ "User-Agent", "AdEmpire/1.0" }};
             auto res = cli.Get(("/r/" + sub + ".rss").c_str(), headers);
             if (!res || res->status != 200) return;
-            for (auto& t : ExtractTitles(res->body, 3))
-                state.newsItems.push_back({ t, "r/" + sub, "" });
+            for (auto& t : ExtractTitles(res->body, 3)) {
+                NewsItem item;
+                item.title = t;
+                item.source = "r/" + sub;
+                item.link = "";
+                state.newsItems.push_back(item);
+            }
         } catch (...) {}
     }
 };

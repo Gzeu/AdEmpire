@@ -28,7 +28,7 @@ public:
             if (j.contains("rates")) {
                 auto& r = j["rates"];
                 if (r.contains("EUR")) state.eurUsd = 1.0 / r["EUR"].get<double>();
-                if (r.contains("RON")) state.ronUsd = 1.0 / r["RON"].get<double>();
+                if (r.contains("RON")) state.usdRon = r["RON"].get<double>();
             }
         } catch (...) { SetFallback(state); }
     }
@@ -36,6 +36,6 @@ public:
 private:
     static void SetFallback(MarketState& state) {
         state.eurUsd = 1.085;
-        state.ronUsd = 0.220;
+        state.usdRon = 4.60;
     }
 };
