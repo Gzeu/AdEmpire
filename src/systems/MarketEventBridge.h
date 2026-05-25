@@ -1,80 +1,90 @@
 #pragma once
 #include "../network/MarketState.h"
 #include <string>
-#include <vector>
 #include <functional>
+#include <vector>
 
 // ============================================================
-//  MarketEventBridge
-//  Reads MarketState and maps it to AdEmpire event IDs.
-//  Call EvaluateTriggers() at each "Next Month" tick.
-//  Returns list of event IDs to fire through EventSystem.
+//  MarketEventBridge.h  —  AdEmpire v1.0
+//  Maps live MarketState → event IDs + campaign multipliers.
+//  Called in GameLoop at every "Next Month" tick.
 // ============================================================
 
-struct MarketEventBridge {
-    using FireFn = std::function<void(const std::string&)>;
+namespace MarketEventBridge {
 
-    // triggerFn: callback that fires an event by ID string
-    // (wrap your EventSystem::TriggerEvent here)
-    static void EvaluateTriggers(const MarketState& ms, FireFn triggerFn) {
-        // ---- Crypto events ------------------------------------
-        if (ms.cryptoBullActive)
-            triggerFn("crypto_bull_run");       // in custom_events.json
-        if (ms.cryptoBearActive)
-            triggerFn("crypto_winter");
-        if (ms.marketPanicActive)
-            triggerFn("market_panic");
-
-        // ---- Ad market health --------------------------------
-        if (ms.adMarketHealth > 1.3f)
-            triggerFn("ad_market_boom");
-        else if (ms.adMarketHealth < 0.7f)
-            triggerFn("ad_budgets_cut");
-
-        // ---- AI hype wave ------------------------------------
-        if (ms.aiHypeActive)
-            triggerFn("ai_hype_wave");          // tech client bonus
-
-        // ---- Tech boom (AI + crypto bull) --------------------
-        if (ms.techBoomActive)
-            triggerFn("tech_sector_boom");
-
-        // ---- Trending keyword bonus --------------------------
-        if (!ms.trendingKeyword.empty()) {
-            // Any campaign targeting the trending keyword gets +25% ROI
-            // EventSystem picks this up via trendingKeyword field
-            triggerFn("trending_topic_active");
-        }
-
-        // ---- Volatility amplifier ----------------------------
-        // High volatility: random events fire more often
-        // Implemented in EventSystem — read globalVolatility directly
+// Returns the single most dominant event ID given current state.
+// Returns empty string if no event is active.
+inline std::string GetDominantEventId(const MarketState& ms) {
+    // Priority order: highest impact first
+    if (ms.btcChange24h <= -12.0) return "crypto_winter";
+    if (ms.btcChange24h >=  12.0) return "crypto_bull_run";
+    if (ms.fearGreedIndex <= 20)  return "market_panic";
+    if (ms.adMarketHealth <= 0.4f) return "ad_budgets_cut";
+    if (ms.adMarketHealth >= 0.85f) return "ad_market_boom";
+    if (ms.globalVolatility >= 0.75f) return "market_panic";
+    // AI hype: check trending keyword
+    if (!ms.trendingKeyword.empty()) {
+        std::string kw = ms.trendingKeyword;
+        for (char& c : kw) c = (char)::tolower((unsigned char)c);
+        if (kw.find("ai") != std::string::npos ||
+            kw.find("gpt") != std::string::npos ||
+            kw.find("openai") != std::string::npos)
+            return "ai_hype_wave";
+        if (kw.find("tech") != std::string::npos)
+            return "tech_sector_boom";
     }
+    return "";
+}
 
-    // Multiplier to apply on campaign ROI at Next Month
-    // Usage: finalROI = baseROI * GetCampaignMultiplier(state)
-    static float GetCampaignMultiplier(const MarketState& ms) {
-        float m = ms.adMarketHealth;              // 0.5 – 1.5
-        if (ms.aiHypeActive) m += 0.08f;          // tech ad demand spike
-        if (ms.cryptoBullActive) m += 0.05f;      // consumer confidence
-        if (ms.cryptoBearActive) m -= 0.08f;      // ad budget cuts
-        if (ms.marketPanicActive) m -= 0.15f;     // fear = no spending
-        return std::max(0.4f, std::min(1.6f, m));
-    }
+// Evaluates ALL applicable events and fires callback for each.
+// Call in Next Month tick:
+//   MarketEventBridge::EvaluateTriggers(ms, [&](const std::string& id){ eventSystem.TriggerById(id); });
+inline void EvaluateTriggers(const MarketState& ms,
+                              std::function<void(const std::string&)> trigger) {
+    if (ms.btcChange24h <= -8.0)   trigger("crypto_winter");
+    if (ms.btcChange24h >=  8.0)   trigger("crypto_bull_run");
+    if (ms.fearGreedIndex <= 20)    trigger("market_panic");
+    if (ms.fearGreedIndex >= 75)    trigger("crypto_bull_run"); // greed = bull
+    if (ms.adMarketHealth <= 0.40f) trigger("ad_budgets_cut");
+    if (ms.adMarketHealth >= 0.85f) trigger("ad_market_boom");
+    if (ms.globalVolatility >= 0.80f) trigger("market_panic");
+    if (!ms.trendingKeyword.empty()) trigger("trending_topic_active");
+}
 
-    // Short human-readable market summary for Dashboard UI
-    static std::string GetMarketSummary(const MarketState& ms) {
-        if (ms.isOffline) return "Market data offline — using neutral values.";
-        std::string s;
-        s += "BTC " + std::string(ms.btc.change24h >= 0 ? "+" : "")
-           + std::to_string((int)ms.btc.change24h) + "% | ";
-        s += "F&G " + std::to_string(ms.fearGreedIndex)
-           + " (" + ms.fearGreedLabel + ") | ";
-        s += "AdHealth " + std::to_string((int)(ms.adMarketHealth * 100)) + "%";
-        if (ms.aiHypeActive)     s += " | AI HYPE";
-        if (ms.cryptoBullActive) s += " | BULL";
-        if (ms.cryptoBearActive) s += " | BEAR";
-        if (ms.marketPanicActive)s += " | PANIC";
-        return s;
-    }
-};
+// Campaign ROI multiplier — composite score from all live indicators.
+// 1.0 = neutral, >1.0 = bull market boost, <1.0 = bear market penalty.
+inline float GetCampaignMultiplier(const MarketState& ms) {
+    float mult = 1.0f;
+
+    // BTC momentum ±15%
+    mult += (float)(ms.btcChange24h / 100.0) * 1.5f;
+
+    // Fear & Greed: 50=neutral, 0=panic(-20%), 100=greed(+20%)
+    mult += ((float)ms.fearGreedIndex - 50.f) / 250.f;
+
+    // Ad market health: 0.5=neutral contribution
+    mult += (ms.adMarketHealth - 0.5f) * 0.4f;
+
+    // Volatility penalty
+    mult -= ms.globalVolatility * 0.15f;
+
+    // Clamp to reasonable bounds
+    if (mult < 0.4f) mult = 0.4f;
+    if (mult > 2.5f) mult = 2.5f;
+    return mult;
+}
+
+// Human-readable summary for Dashboard tooltip / Report panel
+inline std::string GetMarketSummary(const MarketState& ms) {
+    char buf[256];
+    snprintf(buf, sizeof(buf),
+        "BTC %+.1f%% | F&G %d | AdHealth %.0f%% | Vol %.0f%% | Trend: %s",
+        ms.btcChange24h,
+        ms.fearGreedIndex,
+        ms.adMarketHealth * 100.f,
+        ms.globalVolatility * 100.f,
+        ms.trendingKeyword.empty() ? "none" : ms.trendingKeyword.c_str());
+    return std::string(buf);
+}
+
+} // namespace MarketEventBridge

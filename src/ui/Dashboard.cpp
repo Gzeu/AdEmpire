@@ -1,106 +1,168 @@
 #include "Dashboard.h"
-#include "UIStyle.h"
 #include "imgui.h"
-#include <cstdio>
-
-float Dashboard::s_revenueHistory[24] = {};
-int   Dashboard::s_histIdx = 0;
+#include "ChartRenderer.h"
+#include "LiveMarketPanel.h"
+#include "../core/GameState.h"
+#include "../systems/StatsTracker.h"
+#include "../systems/MarketEventBridge.h"
+#include "../network/MarketFeed.h"
+#include <cstring>
 
 void Dashboard::Render(GameState& gs) {
-    ImGui::SetNextWindowPos(ImVec2(0, 40), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(330, 660), ImGuiCond_Always);
-    ImGui::Begin("Dashboard", nullptr,
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+    ImGui::Begin("Dashboard");
 
-    // Agency name + period
-    ImGui::SetWindowFontScale(1.1f);
-    ImGui::TextColored(UIStyle::Accent, "%s", gs.agencyName.c_str());
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::TextColored(UIStyle::Muted, "Month %d  |  Year %d", gs.month, gs.year);
-    ImGui::Spacing();
+    // ── Tab bar: Overview / Channels / Live Market ──────────
+    if (ImGui::BeginTabBar("##dash_tabs")) {
 
-    // ---- KPI Cards row 1 ----
-    int activeClients = 0;
-    for (auto& c : gs.clients) if (c.active) activeClients++;
-    int activeCamps = 0;
-    for (auto& c : gs.campaigns) if (c.active) activeCamps++;
+        // ════════════════════════════════════
+        //  TAB 1 — Overview
+        // ════════════════════════════════════
+        if (ImGui::BeginTabItem(" Overview ")) {
 
-    char budgetStr[24], shareStr[24], clientStr[16], campStr[16];
-    snprintf(budgetStr, 24, gs.budget >= 0 ? "$%.0f" : "-$%.0f",
-             gs.budget >= 0 ? gs.budget : -gs.budget);
-    snprintf(shareStr,  24, "%.1f%%", gs.playerMarketShare);
-    snprintf(clientStr, 16, "%d", activeClients);
-    snprintf(campStr,   16, "%d", activeCamps);
+            // KPI row
+            float avail = ImGui::GetContentRegionAvail().x;
+            float kpiW  = (avail - 24.f) / 4.f;
 
-    float revDelta = gs.monthlyRevenue - gs.monthlyExpenses;
-    char revSub[32];
-    snprintf(revSub, 32, revDelta >= 0 ? "+$%.0f/mo" : "-$%.0f/mo",
-             revDelta >= 0 ? revDelta : -revDelta);
+            auto KPI = [&](const char* label, const char* value, ImVec4 col) {
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.13f,0.13f,0.16f,1.f));
+                ImGui::BeginChild(label, ImVec2(kpiW, 68), true);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.f);
+                ImGui::PushStyleColor(ImGuiCol_Text, col);
+                ImGui::SetWindowFontScale(1.4f);
+                ImGui::TextUnformatted(value);
+                ImGui::SetWindowFontScale(1.0f);
+                ImGui::PopStyleColor();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f,0.6f,0.6f,1.f));
+                ImGui::TextUnformatted(label);
+                ImGui::PopStyleColor();
+                ImGui::EndChild();
+                ImGui::PopStyleColor();
+            };
 
-    UIStyle::KpiCard("CASH", budgetStr, revSub,
-        gs.budget >= 5000.f ? UIStyle::Positive
-      : gs.budget >= 0     ? UIStyle::Warning
-                            : UIStyle::Negative);
-    ImGui::SameLine(0, 6);
-    UIStyle::KpiCard("MARKET SHARE", shareStr, "Goal: 35%", UIStyle::Gold);
+            char bufBudget[32]; snprintf(bufBudget, sizeof(bufBudget), "$%.0f", gs.budget);
+            char bufShare[32];  snprintf(bufShare,  sizeof(bufShare),  "%.1f%%", gs.marketShare * 100.f);
+            char bufClients[16]; snprintf(bufClients, sizeof(bufClients), "%d", (int)gs.clients.size());
+            char bufMonth[16];  snprintf(bufMonth,   sizeof(bufMonth),  "Month %d", gs.currentMonth);
 
-    ImGui::Spacing();
-    UIStyle::KpiCard("CLIENTS", clientStr, "active", UIStyle::Accent);
-    ImGui::SameLine(0, 6);
-    UIStyle::KpiCard("CAMPAIGNS", campStr, "running", UIStyle::Accent);
-    ImGui::Spacing();
+            KPI("Budget",       bufBudget,  ImVec4(0.30f,0.85f,0.50f,1.f));
+            ImGui::SameLine(0.f, 8.f);
+            KPI("Market Share", bufShare,   ImVec4(0.40f,0.70f,1.00f,1.f));
+            ImGui::SameLine(0.f, 8.f);
+            KPI("Clients",      bufClients, ImVec4(1.00f,0.80f,0.20f,1.f));
+            ImGui::SameLine(0.f, 8.f);
+            KPI("Time",         bufMonth,   ImVec4(0.80f,0.55f,1.00f,1.f));
 
-    ImGui::Separator();
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
 
-    // Revenue / Expenses
-    ImGui::TextColored(UIStyle::Positive, "Revenue: $%.0f/mo", gs.monthlyRevenue);
-    ImGui::TextColored(UIStyle::Negative, "Expenses: $%.0f/mo", gs.monthlyExpenses);
-    ImGui::TextColored(revDelta >= 0 ? UIStyle::Positive : UIStyle::Negative,
-        "Net: %+.0f/mo", revDelta);
-    ImGui::Separator();
+            // Revenue history chart
+            ImGui::TextUnformatted("Revenue History");
+            ImGui::Spacing();
+            const auto& hist = StatsTracker::Get().GetRevenueHistory();
+            if (!hist.empty()) {
+                std::vector<float> vals(hist.begin(), hist.end());
+                float mx = *std::max_element(vals.begin(), vals.end());
+                if (mx < 1.f) mx = 1.f;
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.3f,0.8f,0.5f,1.f));
+                ImGui::PlotLines("##rev", vals.data(), (int)vals.size(),
+                                 0, nullptr, 0.f, mx * 1.1f,
+                                 ImVec2(ImGui::GetContentRegionAvail().x, 90.f));
+                ImGui::PopStyleColor();
+            } else {
+                ImGui::TextDisabled("No revenue data yet.");
+            }
 
-    // Staff count
-    ImGui::Text("Staff: %d  |  All-time revenue: $%.0f",
-        (int)gs.staff.size(), gs.stats.totalRevenue);
+            ImGui::Spacing();
 
-    // Reputation bar
-    ImGui::Spacing();
-    ImGui::TextColored(UIStyle::Muted, "Agency Reputation");
-    char repLabel[24]; snprintf(repLabel, 24, "%.0f / 100", gs.stats.reputation);
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, UIStyle::Accent);
-    ImGui::ProgressBar(gs.stats.reputation / 100.f, ImVec2(-1, 16), repLabel);
-    ImGui::PopStyleColor();
+            // Market share trend
+            ImGui::TextUnformatted("Market Share Trend");
+            ImGui::Spacing();
+            const auto& shareHist = StatsTracker::Get().GetMarketShareHistory();
+            if (!shareHist.empty()) {
+                std::vector<float> sv(shareHist.begin(), shareHist.end());
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.4f,0.7f,1.f,1.f));
+                ImGui::PlotLines("##ms", sv.data(), (int)sv.size(),
+                                 0, nullptr, 0.f, 1.f,
+                                 ImVec2(ImGui::GetContentRegionAvail().x, 70.f));
+                ImGui::PopStyleColor();
+            }
 
-    // Market share toward goal
-    ImGui::Spacing();
-    ImGui::TextColored(UIStyle::Muted, "Market Share Progress");
-    char msLabel[24]; snprintf(msLabel, 24, "%.1f%% / 35%%", gs.playerMarketShare);
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, UIStyle::Gold);
-    ImGui::ProgressBar(gs.playerMarketShare / 35.f, ImVec2(-1, 16), msLabel);
-    ImGui::PopStyleColor();
-    ImGui::Separator();
-
-    // Revenue history chart
-    s_revenueHistory[s_histIdx % 24] = gs.monthlyRevenue;
-    s_histIdx++;
-    ImGui::TextColored(UIStyle::Muted, "Revenue History (24mo)");
-    ImGui::PushStyleColor(ImGuiCol_PlotLines, UIStyle::Positive);
-    ImGui::PlotLines("##rev", s_revenueHistory, 24, s_histIdx % 24,
-        nullptr, 0.f,
-        gs.stats.bestMonthRevenue * 1.3f + 1.f,
-        ImVec2(-1, 90));
-    ImGui::PopStyleColor();
-    ImGui::Separator();
-
-    // Active events
-    if (!gs.activeEvents.empty()) {
-        ImGui::TextColored(UIStyle::Warning, "Active Events:");
-        for (auto& ev : gs.activeEvents) {
-            ImGui::BulletText("%s (%dmo)", ev.title.c_str(), ev.monthsLeft);
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("%s\nImpact: %s",
-                    ev.description.c_str(), ev.impact.c_str());
+            ImGui::EndTabItem();
         }
+
+        // ════════════════════════════════════
+        //  TAB 2 — Channels
+        // ════════════════════════════════════
+        if (ImGui::BeginTabItem(" Channels ")) {
+            ImGui::Spacing();
+            ImGui::TextUnformatted("Active campaign channels and their performance:");
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            struct ChanRow { const char* name; float share; float roi; ImVec4 col; };
+            ChanRow channels[] = {
+                { "Social Media",  0.34f, 2.1f, ImVec4(0.4f,0.7f,1.f,1.f) },
+                { "Search Ads",    0.28f, 3.4f, ImVec4(0.3f,0.85f,0.5f,1.f) },
+                { "Display",       0.18f, 1.2f, ImVec4(1.f,0.8f,0.2f,1.f) },
+                { "Influencer",    0.12f, 4.0f, ImVec4(0.8f,0.5f,1.f,1.f) },
+                { "Email",         0.08f, 5.1f, ImVec4(1.f,0.6f,0.3f,1.f) },
+            };
+
+            // Apply market multiplier to ROI
+            const MarketState& ms = MarketFeed::Get().GetState();
+            float mult = MarketEventBridge::GetCampaignMultiplier(ms);
+
+            if (ImGui::BeginTable("##chantbl", 4,
+                ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame)) {
+                ImGui::TableSetupColumn("Channel",    ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Budget Share",ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("ROI (live)", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Trend",      ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableHeadersRow();
+
+                for (auto& c : channels) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::PushStyleColor(ImGuiCol_Text, c.col);
+                    ImGui::TextUnformatted(c.name);
+                    ImGui::PopStyleColor();
+
+                    ImGui::TableNextColumn();
+                    ImGui::ProgressBar(c.share, ImVec2(-1.f, 12.f));
+
+                    ImGui::TableNextColumn();
+                    float effectiveRoi = c.roi * mult;
+                    ImGui::PushStyleColor(ImGuiCol_Text,
+                        effectiveRoi >= c.roi ? ImVec4(0.3f,0.9f,0.5f,1.f)
+                                              : ImVec4(0.9f,0.4f,0.3f,1.f));
+                    ImGui::Text("x%.2f", effectiveRoi);
+                    ImGui::PopStyleColor();
+
+                    ImGui::TableNextColumn();
+                    ImGui::TextDisabled(mult >= 1.f ? "+" : "-");
+                }
+                ImGui::EndTable();
+            }
+
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                mult >= 1.f ? ImVec4(0.3f,0.9f,0.5f,1.f) : ImVec4(0.9f,0.4f,0.3f,1.f));
+            ImGui::Text("Market modifier active: x%.2f  (source: live data)", mult);
+            ImGui::PopStyleColor();
+
+            ImGui::EndTabItem();
+        }
+
+        // ════════════════════════════════════
+        //  TAB 3 — Live Market
+        // ════════════════════════════════════
+        if (ImGui::BeginTabItem(" Live Market ")) {
+            LiveMarketPanel::Render();
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
     }
 
     ImGui::End();
