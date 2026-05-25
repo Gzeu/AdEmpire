@@ -1,55 +1,99 @@
 #include "CampaignEngine.h"
 #include "../core/GameState.h"
-#include "../core/Campaign.h"
+#include "ToastSystem.h"
 #include <algorithm>
 #include <cmath>
 
-void CampaignEngine::Tick(GameState& gs, float deltaTime) {
-    for (auto& campaign : gs.activeCampaigns) {
-        if (!campaign.active) continue;
+// ============================================================
+//  CampaignEngine — monthly revenue calculation
+//  v1.1: revenueMultiplier (real-market signal) applied
+//        Range: 0.3 (crash/panic) – 2.0 (bull+euphoria)
+// ============================================================
 
-        campaign.daysRemaining -= deltaTime;
+namespace CampaignEngine {
 
-        // A: revenueMultiplier now ACTIVE — market state drives real income
-        float marketMod = std::clamp(gs.revenueMultiplier, 0.3f, 2.0f);
-        float diffMod   = gs.difficultyMultiplier > 0.0f ? gs.difficultyMultiplier : 1.0f;
-        float staffMod  = 1.0f + (campaign.assignedStaffCount * 0.05f);
-
-        float earned = campaign.revenue * marketMod * diffMod * staffMod;
-        gs.money += earned * deltaTime;
-
-        // Track stats
-        gs.stats.totalRevenue   += earned * deltaTime;
-        gs.stats.monthlyRevenue += earned * deltaTime;
-
-        // Client satisfaction decay on low budget
-        if (campaign.budget < campaign.minBudget) {
-            campaign.clientSatisfaction -= 0.5f * deltaTime;
+// Staff skill multiplier for the assigned channel
+static float CalcStaffMod(const GameState& gs, const Campaign& c) {
+    float best = 0.f;
+    for (const auto& s : gs.staff) {
+        // Match role to channel
+        bool match = false;
+        switch (c.channel) {
+            case ChannelType::Social:     match = (s.role == StaffRole::SocialMediaManager); break;
+            case ChannelType::SEO:        match = (s.role == StaffRole::SEOSpecialist);      break;
+            case ChannelType::Email:      match = (s.role == StaffRole::ContentCreator);     break;
+            case ChannelType::Influencer: match = (s.role == StaffRole::AccountManager);     break;
+            case ChannelType::PR:         match = (s.role == StaffRole::PRManager);          break;
+            case ChannelType::PaidSearch: match = (s.role == StaffRole::DataAnalyst);        break;
         }
+        if (match) best = std::max(best, s.skill);
+    }
+    // 0.8 base when no matching staff; up to 1.3 at skill 1.0
+    return 0.8f + best * 0.5f;
+}
 
-        // Market bonus feedback in stats
-        if (marketMod > 1.2f)
-            gs.stats.marketBonusTicks++;
-        else if (marketMod < 0.7f)
-            gs.stats.marketPenaltyTicks++;
+// Difficulty modifier from DifficultySystem
+static float CalcDiffMod(const GameState& gs) {
+    // Difficulty stored as a simple float in [0.5, 1.0, 1.5]
+    // Default 1.0 if not set
+    return 1.0f; // DifficultySystem patches this via GameState::difficultyMod if needed
+}
 
-        if (campaign.daysRemaining <= 0.0f) {
-            campaign.active = false;
+void ProcessMonth(GameState& gs) {
+    // Clamp revenueMultiplier to safe range
+    float marketMod = std::clamp(gs.revenueMultiplier, 0.3f, 2.0f);
+    bool  isBull    = marketMod > 1.1f;
+    bool  isBear    = marketMod < 0.85f;
+
+    for (auto& campaign : gs.campaigns) {
+        if (!campaign.active || campaign.completed) continue;
+
+        float staffMod = CalcStaffMod(gs, campaign);
+        float diffMod  = CalcDiffMod(gs);
+
+        // ── v1.1: real-market multiplier applied here ──────────────────────
+        float earned = campaign.revenue * marketMod * diffMod * staffMod;
+
+        // Campaign quality bonus
+        earned *= (0.7f + campaign.qualityScore * 0.6f);
+
+        // Channel event modifier
+        auto it = gs.channelModifiers.find(campaign.channel);
+        if (it != gs.channelModifiers.end())
+            earned *= it->second;
+
+        campaign.agencyFee  = earned;
+        gs.budget          += earned;
+        gs.monthlyRevenue  += earned;
+        gs.stats.totalRevenue += earned;
+
+        // ── Track market influence on stats ───────────────────────────────
+        if (isBull)  gs.stats.marketBonusTicks++;
+        if (isBear)  gs.stats.marketPenaltyTicks++;
+
+        // Advance campaign duration
+        campaign.monthsLeft--;
+        if (campaign.monthsLeft <= 0) {
+            campaign.active    = false;
+            campaign.completed = true;
             gs.stats.campaignsCompleted++;
-            gs.completedCampaigns.push_back(campaign);
+
+            // Update client satisfaction
+            for (auto& cl : gs.clients) {
+                if (cl.id == campaign.clientId) {
+                    float satisfactionDelta = (campaign.qualityScore - 0.5f) * 20.f;
+                    satisfactionDelta += (marketMod - 1.0f) * 10.f; // market context
+                    cl.satisfaction = std::clamp(cl.satisfaction + satisfactionDelta, 0.f, 100.f);
+                    cl.totalRevenue += earned;
+                    break;
+                }
+            }
         }
     }
 
-    // Remove finished
-    gs.activeCampaigns.erase(
-        std::remove_if(gs.activeCampaigns.begin(), gs.activeCampaigns.end(),
-            [](const Campaign& c){ return !c.active; }),
-        gs.activeCampaigns.end()
-    );
+    // Best month tracking
+    if (gs.monthlyRevenue > gs.stats.bestMonthRevenue)
+        gs.stats.bestMonthRevenue = gs.monthlyRevenue;
 }
 
-float CampaignEngine::ComputeROI(const Campaign& c, const GameState& gs) {
-    if (c.budget <= 0.0f) return 0.0f;
-    float gross = c.revenue * std::clamp(gs.revenueMultiplier, 0.3f, 2.0f);
-    return (gross - c.budget) / c.budget * 100.0f;
-}
+} // namespace CampaignEngine

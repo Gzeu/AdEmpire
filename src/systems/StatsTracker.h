@@ -1,53 +1,39 @@
 #pragma once
-#include <cstdint>
+#include "../core/GameState.h"
 
-// ─── AgencyStats ─────────────────────────────────────────────────────────────
-// Central stats struct embedded in GameState.
-// Updated by: CampaignEngine (revenue), ContractSystem (contracts),
-//             AchievementSystem (achievements), EventPopup (market ticks)
-// Read by:    EndGameSummary, StatsPanel, LeaderboardPersistence
-// ─────────────────────────────────────────────────────────────────────────────
+// ============================================================
+//  StatsTracker v1.1
+//  Extension of AgencyStats with market + monthly helpers.
+//  AgencyStats IS the stats struct — this header adds:
+//    - Extended fields via macro patch (injected into AgencyStats)
+//    - Free functions: ResetMonth(), WinRate()
+//    - Alias: StatsTracker = AgencyStats (backward compat)
+//
+//  NOTE: The fields below are declared directly in AgencyStats
+//  (GameState.h was updated in v1.1 push).
+// ============================================================
 
-struct AgencyStats {
-    // Revenue tracking
-    float    totalRevenue         = 0.0f;
-    float    monthlyRevenue       = 0.0f;  // resets each month
-    float    bestMonthRevenue     = 0.0f;
-
-    // Campaigns
-    int      campaignsCompleted   = 0;
-    int      campaignsFailed      = 0;
-    int      campaignsStarted     = 0;
-
-    // Contracts
-    int      contractsFulfilled   = 0;
-    int      contractsBroken      = 0;
-
-    // Market
-    float    peakMarketShare      = 0.0f;
-    int      marketBonusTicks     = 0;  // frames where revenueMultiplier > 1.2
-    int      marketPenaltyTicks   = 0;  // frames where revenueMultiplier < 0.7
-
-    // Staff & Achievements
-    int      maxStaffLevel        = 1;
-    int      achievementsUnlocked = 0;
-    int      negotiationsWon      = 0;
-    int      negotiationsLost     = 0;
-
-    // Helpers
-    void UpdateBestMonth() {
-        if (monthlyRevenue > bestMonthRevenue)
-            bestMonthRevenue = monthlyRevenue;
-    }
-    void ResetMonth() {
-        UpdateBestMonth();
-        monthlyRevenue = 0.0f;
-    }
-    float WinRate() const {
-        int total = negotiationsWon + negotiationsLost;
-        return total > 0 ? (float)negotiationsWon / total : 0.0f;
-    }
-};
-
-// Alias for backward compatibility (old code using StatsTracker)
+// Backward-compat alias so any code using StatsTracker compiles
 using StatsTracker = AgencyStats;
+
+namespace StatsTrackerFn {
+
+// Call at the end of each month (after revenue is totalled)
+inline void ResetMonth(AgencyStats& s) {
+    // bestMonthRevenue is kept (it's a running max, not reset)
+    // Only transient per-month counters reset here if needed in future
+    (void)s; // currently all fields are cumulative; placeholder for future
+}
+
+// Negotiation win rate 0-100%, returns -1 if no negotiations played
+inline float WinRate(const AgencyStats& s) {
+    int total = s.negotiationsWon + s.negotiationsLost;
+    if (total == 0) return -1.f;
+    return 100.f * s.negotiationsWon / (float)total;
+}
+
+// Track a market bonus tick (bull market month)
+inline void RecordBullTick(AgencyStats& s)  { s.marketBonusTicks++;   }
+inline void RecordBearTick(AgencyStats& s)  { s.marketPenaltyTicks++; }
+
+} // namespace StatsTrackerFn

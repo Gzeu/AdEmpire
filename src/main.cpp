@@ -19,14 +19,16 @@
 #include "systems/AchievementSystem.h"
 #include "systems/StaffLeveling.h"
 #include "systems/SeasonalEvents.h"
+#include "systems/LeaderboardPersistence.h"  // v1.1: disk persistence
+#include "systems/StatsTracker.h"             // v1.1: alias + helpers
 
 // ── v0.8 Systems ─────────────────────────────────────────────────────────────
 #include "audio/AudioSystem.h"
 #include "network/LeaderboardClient.h"
 
 // ── v1.0 Market Systems ──────────────────────────────────────────────────────
-#include "network/MarketFeed.h"          // v1.0: CoinGecko + Fear&Greed + FX
-#include "network/MarketEventBridge.h"   // v1.0: real market → game events
+#include "network/MarketFeed.h"
+#include "network/MarketEventBridge.h"
 
 // ── UI ──────────────────────────────────────────────────────────────────────
 #include "ui/Theme.h"
@@ -51,21 +53,22 @@
 #include "ui/VictoryScreen.h"
 #include "ui/EventPopup.h"
 #include "ui/AgencyBrandingPanel.h"
-#include "ui/LiveMarketPanel.h"          // v1.0: Live Market tab
+#include "ui/LiveMarketPanel.h"
+#include "ui/EndGameSummary.h"               // v1.1
 
 static GameState  gs;
-static bool       gameStarted      = false;
+bool              gameStarted      = false;  // extern used by EndGameSummary
 static bool       pendingNextMonth = false;
 static double     lastTime         = 0.0;
 
 // ── v1.0: Market feed timer ──────────────────────────────────────────────────
 static double     marketFetchTimer = 0.0;
-constexpr double  MARKET_FETCH_INTERVAL = 300.0; // 5 minutes
+constexpr double  MARKET_FETCH_INTERVAL = 300.0;
 
 // ── v0.9 global UI objects ───────────────────────────────────────────────────
 static SplashScreen        g_splash;
 static VictoryScreen       g_victory;
-static EventPopup          g_eventPopup;
+static EventPopup          g_eventPopup;      // v1.1: updated class signature
 static AgencyBrandingPanel g_branding;
 static bool                g_showBranding = false;
 
@@ -123,7 +126,7 @@ void RenderNavbar() {
     if (ImGui::Button(" \xe2\x9a\x99 Settings "))  openOnly(gs.showSettings);
     ImGui::SameLine(0, 20);
 
-    // ── v1.0: Live market indicator in navbar ──────────────────────────────
+    // ── v1.0: Live market indicator ────────────────────────────────────────
     const auto& ms = MarketFeed::Get().GetState();
     ImVec4 mktCol = ms.btcChange24h > 2.0f  ? ImVec4(0.2f, 0.9f, 0.4f, 1.0f)
                   : ms.btcChange24h < -2.0f ? ImVec4(0.9f, 0.3f, 0.3f, 1.0f)
@@ -132,7 +135,6 @@ void RenderNavbar() {
     ImGui::SameLine(0, 6);
     ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "|");
     ImGui::SameLine(0, 6);
-    // Fear & Greed color: red <25, orange <45, yellow <55, green >55
     ImVec4 fgCol = ms.fearGreedIndex < 25 ? ImVec4(0.9f, 0.2f, 0.2f, 1.0f)
                  : ms.fearGreedIndex < 45 ? ImVec4(0.9f, 0.6f, 0.1f, 1.0f)
                  : ms.fearGreedIndex < 55 ? ImVec4(0.9f, 0.9f, 0.2f, 1.0f)
@@ -192,62 +194,48 @@ void RenderGame(float dt) {
         }
     }
 
+    // ── v1.1: EventPopup (new signature with gs + toasts) ─────────────────
     if (gs.pendingEventPopup) {
-        MarketEventData evt;
-        evt.id = gs.currentEvent.id;
-        evt.title = gs.currentEvent.title;
-        evt.description = gs.currentEvent.description;
-        evt.effectText = gs.currentEvent.impact;
-        evt.category = "neutral";
-        evt.durationMonths = gs.currentEvent.durationMonths;
-        g_eventPopup.Show(evt);
+        g_eventPopup.Show(gs.currentEvent);
         gs.pendingEventPopup = false;
     }
-    g_eventPopup.Render();
+    g_eventPopup.Render(gs, ToastSystem::Get());
 
     ToastSystem::Get().Update(dt);
     ToastSystem::Get().Render();
     AudioSystem::Get().Tick();
 
-    if (gs.victory) {
+    // ── v1.1: EndGameSummary (win or lose) ────────────────────────────────
+    if (gs.showEndGame || gs.victory || gs.gameOver) {
+        if (!gs.showEndGame) gs.showEndGame = true;
+        EndGameSummary::Render(gs);
+        return; // block rest of UI while summary is showing
+    }
+
+    // Legacy VictoryScreen kept for backward compat (skipped if showEndGame)
+    if (gs.victory && !gs.showEndGame) {
         if (!g_victory.IsOpen()) {
             VictoryStats vstats;
             vstats.finalMarketShare = gs.playerMarketShare;
-            vstats.totalRevenue = gs.stats.totalRevenue;
-            vstats.monthsPlayed = gs.stats.monthsPlayed;
-            vstats.clientsServed = gs.stats.clientsAcquired;
+            vstats.totalRevenue     = gs.stats.totalRevenue;
+            vstats.monthsPlayed     = gs.stats.monthsPlayed;
+            vstats.clientsServed    = gs.stats.clientsAcquired;
             vstats.achievementsEarned = 0;
-            vstats.campaignsRun = gs.stats.campaignsCompleted;
+            vstats.campaignsRun     = gs.stats.campaignsCompleted;
             vstats.bestMonthRevenue = gs.stats.bestMonthRevenue;
-            vstats.agencyName = gs.agencyName;
-            vstats.difficulty = "Normal";
+            vstats.agencyName       = gs.agencyName;
+            vstats.difficulty       = "Normal";
             g_victory.Open(vstats);
             SOUND(Victory);
         }
         int vr = g_victory.Render();
         if (vr == 1) {
-            gs           = GameState();
-            gameStarted  = false;
+            gs          = GameState();
+            gameStarted = false;
             MainMenu::s_showMenu = true;
         } else if (vr == 2) {
             openOnly_v(gs.showLeaderboard);
         }
-    }
-
-    if (gs.gameOver) {
-        ImVec2 c = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(440, 240));
-        ImGui::Begin("GAME OVER", nullptr, ImGuiWindowFlags_NoDecoration);
-        ImGui::SetWindowFontScale(2.2f);
-        ImGui::TextColored(UIStyle::Negative, " GAME OVER");
-        ImGui::SetWindowFontScale(1.0f);
-        ImGui::Text("Agency bankrupt (budget < -$50,000)");
-        ImGui::Text("Revenue earned:   $%.0f", gs.stats.totalRevenue);
-        ImGui::Text("Months survived:  %d",    gs.stats.monthsPlayed);
-        if (ImGui::Button("Try Again", ImVec2(-1, 40)))
-            { gs = GameState(); gameStarted = false; MainMenu::s_showMenu = true; }
-        ImGui::End();
     }
 }
 
@@ -260,7 +248,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(
-        1280, 720, "AdEmpire v1.0 \xe2\x80\x94 Marketing Tycoon", nullptr, nullptr);
+        1280, 720, "AdEmpire v1.1 \xe2\x80\x94 Marketing Tycoon", nullptr, nullptr);
     if (!window) return -1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -270,12 +258,14 @@ int main() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    // io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // v1.0: docking - commented out for compatibility
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
-    Theme::Init();  // v1.0: Roboto + full palette (replaces ApplyDarkMarketing)
+    Theme::Init();
 
     AudioSystem::Get().Init();
+
+    // Load leaderboard from disk on startup
+    LeaderboardPersistence::Get().GetEntries();
 
     // ── v1.0: Initial market fetch (async, non-blocking) ──────────────────
     MarketFeed::Get().FetchAsync();
@@ -318,12 +308,12 @@ int main() {
             }
         } else {
             if (pendingNextMonth) {
-                // ── v1.0: Apply real market modifiers before advancing ─────
+                // ── v1.1: Apply real market multiplier before advancing ────
                 const MarketState& ms = MarketFeed::Get().GetState();
-                // MarketEventBridge::Get().EvaluateAndTrigger(gs); // EvaluateAndTrigger doesn't exist
-                auto triggered = MarketEventBridge::Get().Evaluate(ms, gs.month * 30.0f); // Use game day approximation
                 float revMult = MarketEventBridge::Get().GetRevenueMultiplier(ms);
-                // gs.revenueMultiplier = revMult;  // revenueMultiplier doesn't exist in GameState
+                gs.revenueMultiplier = revMult;  // v1.1: NOW connected
+
+                auto triggered = MarketEventBridge::Get().Evaluate(ms, (float)(gs.month * 30));
 
                 SeasonalEvents::Apply(gs);
                 EventSystem::TryTriggerEvent(gs);
@@ -332,6 +322,9 @@ int main() {
                 AchievementSystem::Check(gs);
                 ReportPanel::GenerateMonthlyReport(gs);
                 Simulation::AdvanceMonth(gs);
+
+                // ── v1.1: Reset monthly stats ──────────────────────────────
+                StatsTrackerFn::ResetMonth(gs.stats);
 
                 gs.showReport = true;
                 for (bool* p : { &gs.showCampaigns, &gs.showClients, &gs.showStaff,
@@ -357,7 +350,11 @@ int main() {
                     SOUND(Notification);
                 }
 
-                if (gs.gameOver) SOUND(GameOver);
+                // ── v1.1: Trigger EndGameSummary on win/lose ───────────────
+                if (gs.victory || gs.gameOver) {
+                    gs.showEndGame = true;
+                    if (gs.gameOver) SOUND(GameOver);
+                }
             }
             RenderGame(dt);
         }

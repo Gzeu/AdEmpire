@@ -6,7 +6,7 @@
 #include "imgui.h"
 #include "../systems/Leaderboard.h"
 
-// ─── Channel Types ───────────────────────────────────────────────────────────────────────
+// ─── Channel Types ───────────────────────────────────────────────────────────
 enum class ChannelType {
     Social, SEO, Email, Influencer, PR, PaidSearch
 };
@@ -21,7 +21,7 @@ static const char* ChannelNames[] = {
     "Social Media", "SEO", "Email", "Influencer", "PR", "Paid Search"
 };
 
-// ─── Campaign ───────────────────────────────────────────────────────────────────────────
+// ─── Campaign ────────────────────────────────────────────────────────────────
 struct Campaign {
     int         id;
     std::string name;
@@ -40,7 +40,7 @@ struct Campaign {
     float       qualityScore;
 };
 
-// ─── Client ────────────────────────────────────────────────────────────────────────────
+// ─── Client ──────────────────────────────────────────────────────────────────
 enum class ContractType {
     Monthly, Quarterly, Annual
 };
@@ -76,13 +76,13 @@ struct Client {
     bool           active;
     bool           available;
     bool           inNegotiation = false;
-    ContractType   contractType = ContractType::Monthly;
+    ContractType   contractType  = ContractType::Monthly;
     std::vector<int> campaignIds;
     float          totalRevenue;
     int            unlockMonth = 1;
 };
 
-// ─── Staff ─────────────────────────────────────────────────────────────────────────────
+// ─── Staff ───────────────────────────────────────────────────────────────────
 enum class StaffRole {
     SocialMediaManager, SEOSpecialist, ContentCreator,
     PRManager, DataAnalyst, AccountManager
@@ -107,7 +107,7 @@ struct StaffMember {
     int         level = 0;
 };
 
-// ─── AI Competitor (legacy stub kept for save compat) ─────────────────────────────────
+// ─── AI Competitor ───────────────────────────────────────────────────────────
 struct AIAgency {
     std::string name;
     float       marketShare;
@@ -118,7 +118,7 @@ struct AIAgency {
     std::string strategy;
 };
 
-// ─── News Event ──────────────────────────────────────────────────────────────────────────
+// ─── News Event ──────────────────────────────────────────────────────────────
 struct NewsEvent {
     std::string title, description, impact;
     float socialMod, seoMod, emailMod, influencerMod, prMod, paidMod;
@@ -128,7 +128,7 @@ struct NewsEvent {
     int   monthsLeft;
 };
 
-// ─── v0.9: Game Event ───────────────────────────────────────────────────────────────────────
+// ─── v0.9: Game Event ────────────────────────────────────────────────────────
 struct GameEvent {
     std::string id;
     std::string title;
@@ -146,21 +146,26 @@ struct GameEvent {
     int   durationMonths = 1;
 };
 
-// ─── Agency Stats ────────────────────────────────────────────────────────────────────────
+// ─── Agency Stats (v1.1 extended) ────────────────────────────────────────────
 struct AgencyStats {
-    float totalRevenue       = 0.f;
-    float totalSpent         = 0.f;
-    int   campaignsCompleted = 0;
-    int   clientsAcquired    = 0;
-    int   clientsLost        = 0;
-    int   monthsPlayed       = 0;
-    float bestMonthRevenue   = 0.f;
-    float reputation         = 0.f;
-    int   negotiationsWon    = 0;
-    int   negotiationsLost   = 0;
+    float totalRevenue        = 0.f;
+    float totalSpent          = 0.f;
+    int   campaignsCompleted  = 0;
+    int   clientsAcquired     = 0;
+    int   clientsLost         = 0;
+    int   monthsPlayed        = 0;
+    float bestMonthRevenue    = 0.f;
+    float reputation          = 0.f;
+    int   negotiationsWon     = 0;
+    int   negotiationsLost    = 0;
+    int   contractsBroken     = 0;
+
+    // v1.1: real-market influence tracking
+    int   marketBonusTicks    = 0;  // months where revenueMultiplier > 1.1
+    int   marketPenaltyTicks  = 0;  // months where revenueMultiplier < 0.85
 };
 
-// ─── v0.2: FitScore ──────────────────────────────────────────────────────────────────────────
+// ─── v0.2: FitScore ──────────────────────────────────────────────────────────
 struct FitScore {
     float channel    = 0.f;
     float industry   = 0.f;
@@ -169,7 +174,7 @@ struct FitScore {
     float total() const { return channel + industry + reputation + capacity; }
 };
 
-// ─── v0.2: CapacityInfo ───────────────────────────────────────────────────────────────────────
+// ─── v0.2: CapacityInfo ──────────────────────────────────────────────────────
 struct CapacityInfo {
     int   maxClients     = 4;
     float utilizationPct = 0.f;
@@ -177,7 +182,7 @@ struct CapacityInfo {
     bool  burnoutRisk    = false;
 };
 
-// ─── v0.2: Quarterly Goals ─────────────────────────────────────────────────────────────────────
+// ─── v0.2: Quarterly Goals ───────────────────────────────────────────────────
 enum class GoalType { Revenue, ClientCount, MarketShare, CampaignCount, Reward };
 struct QuarterlyGoal {
     GoalType    type;
@@ -189,29 +194,29 @@ struct QuarterlyGoal {
     bool        failed;
 };
 
-// ─── v0.2: Negotiation ────────────────────────────────────────────────────────────────────────
+// ─── v0.2: Negotiation ───────────────────────────────────────────────────────
 enum class NegotiationStage {
     Intro, BudgetDiscussion, ChannelSelection, ContractTerms, FinalOffer, Closed
 };
 struct NegotiationState {
-    NegotiationStage stage         = NegotiationStage::Intro;
-    float            clientMood    = 60.f;
-    int              pressure      = 0;
-    float            offeredBudget = 0.f;
-    bool             won           = false;
-    bool             closed        = false;
-    bool             active        = false;
-    int              clientId      = -1;
+    NegotiationStage stage           = NegotiationStage::Intro;
+    float            clientMood      = 60.f;
+    int              pressure        = 0;
+    float            offeredBudget   = 0.f;
+    bool             won             = false;
+    bool             closed          = false;
+    bool             active          = false;
+    int              clientId        = -1;
     std::string      lastMessage;
-    bool             lostDeal      = false;
-    bool             wonDeal       = false;
+    bool             lostDeal        = false;
+    bool             wonDeal         = false;
     ContractType     offeredContract = ContractType::Monthly;
     ChannelType      offeredChannel  = ChannelType::Social;
     FitScore         fitScore;
     int              playerPressure  = 0;
 };
 
-// ─── v0.2: Specialization ──────────────────────────────────────────────────────────────────────
+// ─── v0.2: Specialization ────────────────────────────────────────────────────
 struct Specialization {
     ClientIndustry industry;
     float          bonusMultiplier;
@@ -220,7 +225,7 @@ struct Specialization {
     bool           unlocked;
 };
 
-// ─── v0.5: Save Slot ───────────────────────────────────────────────────────────────────────────
+// ─── v0.5: Save Slot ─────────────────────────────────────────────────────────
 struct SaveSlotMeta {
     bool        occupied    = false;
     std::string agencyName;
@@ -231,16 +236,10 @@ struct SaveSlotMeta {
     int         clients     = 0;
 };
 
-// ─── Achievement (forward declaration) ──────────────────────────────────────────────────────
+// ─── Achievement (forward declaration) ───────────────────────────────────────
 struct Achievement;
 
-// ─── v1.0: Contract Offer (forward declaration) ─────────────────────────────────────────────
-struct ContractOffer;
-
-// ─── v1.0: CashflowSnapshot (forward declaration) ───────────────────────────────────────────
-struct CashflowSnapshot;
-
-// ─── Main GameState ────────────────────────────────────────────────────────────────────────
+// ─── Main GameState ───────────────────────────────────────────────────────────
 struct GameState {
     // Agency info
     std::string agencyName      = "My Agency";
@@ -254,7 +253,7 @@ struct GameState {
     std::vector<Client>         clients;
     std::vector<Campaign>       campaigns;
     std::vector<StaffMember>    staff;
-    std::vector<AIAgency>       competitors;      // legacy
+    std::vector<AIAgency>       competitors;
     std::vector<NewsEvent>      activeEvents;
     std::vector<QuarterlyGoal>  quarterlyGoals;
     std::vector<Specialization> specializations;
@@ -274,8 +273,8 @@ struct GameState {
     // Market
     float playerMarketShare = 2.f;
 
-    // ── v1.0: Real-market revenue multiplier (set by MarketEventBridge each month)
-    // Range: 0.3 (extreme bear/panic) – 2.0 (bull+euphoria)
+    // ── v1.1: Real-market revenue multiplier
+    // Set by MarketEventBridge each month. Range: 0.3 – 2.0. Default 1.0 = neutral.
     float revenueMultiplier = 1.0f;
 
     // Auto-increment IDs
@@ -291,8 +290,8 @@ struct GameState {
     bool        pendingEventPopup = false;
     GameEvent   currentEvent;
 
-    // ── v1.0: Pending toasts from systems (shown by Dashboard next frame)
-    std::vector<std::string> pendingToasts;
+    // ── v1.1: End game summary screen
+    bool        showEndGame = false;
 
     // ── UI flags
     bool showDashboard       = true;
@@ -311,12 +310,11 @@ struct GameState {
     bool showLeaderboard     = false;
     bool showSettings        = false;
     bool showStats           = false;
-    bool showContracts       = false;   // v1.0 NEW
     bool gameOver            = false;
     bool victory             = false;
 };
 
-// ─── Achievement ────────────────────────────────────────────────────────────────────────────
+// ─── Achievement ─────────────────────────────────────────────────────────────
 struct Achievement {
     int         id;
     std::string title;
