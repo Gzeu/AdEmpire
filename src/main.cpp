@@ -46,13 +46,40 @@
 #include "ui/GoalsPanel.h"
 #include "ui/SpecializationPanel.h"
 
-static GameState gs;
-static bool      gameStarted      = false;
-static bool      pendingNextMonth = false;
-static double    lastTime         = 0.0;
+// ── v0.9 Graphics ────────────────────────────────────────────────────────────
+#include "ui/SplashScreen.h"             // v0.9: ASCII logo + typewriter intro
+#include "ui/VictoryScreen.h"            // v0.9: confetti + stat cards
+#include "ui/EventPopup.h"               // v0.9: styled event modal
+#include "ui/AgencyBrandingPanel.h"      // v0.9: branding + logo picker
+// ChartRenderer.h is included directly inside StatsPanel.cpp
+
+static GameState  gs;
+static bool       gameStarted      = false;
+static bool       pendingNextMonth = false;
+static double     lastTime         = 0.0;
+
+// ── v0.9 global UI objects ───────────────────────────────────────────────────
+static SplashScreen        g_splash;
+static VictoryScreen       g_victory;
+static EventPopup          g_eventPopup;
+static AgencyBrandingPanel g_branding;
+static bool                g_showBranding = false;  // toggled from MainMenu NewGame
 
 static void glfw_error_callback(int error, const char* desc) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, desc);
+}
+
+// ── helper: close all panels except target ───────────────────────────────────
+static void openOnly_v(bool& target) {
+    bool* all[] = {
+        &gs.showCampaigns, &gs.showClients, &gs.showStaff,
+        &gs.showMarketMap, &gs.showNewsfeed, &gs.showReport,
+        &gs.showAchievements, &gs.showGoals, &gs.showSpecializations,
+        &gs.showNegotiation, &gs.showTemplates, &gs.showSaveSlots,
+        &gs.showLeaderboard, &gs.showSettings
+    };
+    for (auto* p : all) *p = false;
+    target = true;
 }
 
 // ── Navbar ───────────────────────────────────────────────────────────────────
@@ -63,17 +90,7 @@ void RenderNavbar() {
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    auto openOnly = [&](bool& target) {
-        bool* all[] = {
-            &gs.showCampaigns, &gs.showClients, &gs.showStaff,
-            &gs.showMarketMap, &gs.showNewsfeed, &gs.showReport,
-            &gs.showAchievements, &gs.showGoals, &gs.showSpecializations,
-            &gs.showNegotiation, &gs.showTemplates, &gs.showSaveSlots,
-            &gs.showLeaderboard, &gs.showSettings                          // v0.8
-        };
-        for (auto* p : all) *p = false;
-        target = true;
-    };
+    auto openOnly = [&](bool& target) { openOnly_v(target); };
 
     if (ImGui::Button(" Dashboard  "))  { gs.showDashboard = true; }
     ImGui::SameLine();
@@ -97,9 +114,11 @@ void RenderNavbar() {
     ImGui::SameLine();
     if (ImGui::Button(" Report     "))  openOnly(gs.showReport);
     ImGui::SameLine();
-    if (ImGui::Button(" 🏆 Board   "))  openOnly(gs.showLeaderboard);     // v0.8
+    if (ImGui::Button(" [B]rand    "))  { g_showBranding = true; }        // v0.9
     ImGui::SameLine();
-    if (ImGui::Button(" ⚙ Settings "))  openOnly(gs.showSettings);       // v0.8
+    if (ImGui::Button(" \xf0\x9f\x8f\x86 Board   "))  openOnly(gs.showLeaderboard);  // v0.8
+    ImGui::SameLine();
+    if (ImGui::Button(" \xe2\x9a\x99 Settings "))  openOnly(gs.showSettings);       // v0.8
     ImGui::SameLine(0, 20);
 
     ImVec4 budgetCol = gs.budget > 3000 ? UIStyle::Positive
@@ -117,7 +136,7 @@ void RenderNavbar() {
         SOUND(ButtonClick);   // v0.8: audio feedback
     }
     ImGui::SameLine();
-    if (ImGui::Button(" 💾 Save ")) {
+    if (ImGui::Button(" \xf0\x9f\x92\xbe Save ")) {
         openOnly(gs.showSaveSlots);
         SOUND(ButtonClick);   // v0.8
     }
@@ -146,28 +165,47 @@ void RenderGame(float dt) {
 
     NegotiationPanel::Render(gs);
 
+    // ── v0.9: Agency Branding Panel ────────────────────────────────────────
+    if (g_showBranding) {
+        if (g_branding.Render()) {
+            // Confirmed: apply branding data to gs
+            gs.agencyColor  = g_branding.GetColor();
+            gs.agencyLogo   = g_branding.GetLogo();
+            g_showBranding  = false;
+            TOAST_SUCCESS("Branding updated!");
+            SOUND(ButtonClick);
+        }
+    }
+
+    // ── v0.9: Pending event popup ──────────────────────────────────────────
+    if (gs.pendingEventPopup) {
+        g_eventPopup.Show(gs.currentEvent);
+        gs.pendingEventPopup = false;
+    }
+    g_eventPopup.Render();                 // v0.9
+
     ToastSystem::Get().Update(dt);
     ToastSystem::Get().Render();
     AudioSystem::Get().Tick();             // v0.8: cleanup finished sources
 
-    // ── Win overlay ────────────────────────────────────────────────────────
+    // ── v0.9: Victory Screen (replaces basic overlay) ──────────────────────
     if (gs.victory) {
-        ImVec2 c = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(c, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(440, 260));
-        ImGui::Begin("VICTORY!", nullptr, ImGuiWindowFlags_NoDecoration);
-        ImGui::SetWindowFontScale(2.2f);
-        ImGui::TextColored(UIStyle::Positive, "  VICTORY!");
-        ImGui::SetWindowFontScale(1.0f);
-        ImGui::Text("You reached 35%% market share!");
-        ImGui::Text("Total Revenue:  $%.0f", gs.stats.totalRevenue);
-        ImGui::Text("Months played:  %d",    gs.stats.monthsPlayed);
-        ImGui::Spacing();
-        if (UIStyle::GreenButton("Submit to Leaderboard", ImVec2(-1, 36)))
-            openOnly_v(gs.showLeaderboard);  // opens Submit tab
-        if (UIStyle::GreenButton("Play Again", ImVec2(-1, 36)))
-            { gs = GameState(); gameStarted = false; MainMenu::s_showMenu = true; }
-        ImGui::End();
+        if (!g_victory.IsOpen()) {
+            g_victory.Open(gs.stats);
+            SOUND(Victory);
+        }
+        int vr = g_victory.Render(dt);     // v0.9: animated confetti
+        if (vr == 1) {
+            // Play Again
+            g_victory.Close();
+            gs           = GameState();
+            gameStarted  = false;
+            MainMenu::s_showMenu = true;
+        } else if (vr == 2) {
+            // Submit to Leaderboard
+            g_victory.Close();
+            openOnly_v(gs.showLeaderboard);
+        }
     }
 
     // ── Lose overlay ───────────────────────────────────────────────────────
@@ -198,7 +236,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(
-        1280, 720, "AdEmpire v0.8 — Marketing Tycoon", nullptr, nullptr);
+        1280, 720, "AdEmpire v0.9 \xe2\x80\x94 Marketing Tycoon", nullptr, nullptr);
     if (!window) return -1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -215,6 +253,9 @@ int main() {
     // ── v0.8: init audio ──────────────────────────────────────────────────
     AudioSystem::Get().Init();
 
+    // ── v0.9: splash runs first, before game loop blocks ─────────────────
+    // g_splash renders inside the main loop below via IsDone() check
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         double now = glfwGetTime();
@@ -225,12 +266,27 @@ int main() {
         ImGui_ImplGLFW_NewFrame();
         ImGui::NewFrame();
 
-        if (!gameStarted) {
-            if (MainMenu::Render(gs)) {
-                gameStarted = true;
+        // ── v0.9: Splash gate ─────────────────────────────────────────────
+        if (!g_splash.IsDone()) {
+            g_splash.Render(dt);
+        }
+        // ── Branding gate on first NewGame ────────────────────────────────
+        else if (g_showBranding && !gameStarted) {
+            if (g_branding.Render()) {
+                gs.agencyColor = g_branding.GetColor();
+                gs.agencyLogo  = g_branding.GetLogo();
+                g_showBranding = false;
+                // Now actually start the game
                 AchievementSystem::Init(gs);
                 TOAST_SUCCESS("Agency founded! Good luck.");
-                SOUND(Notification);  // v0.8: startup sound
+                SOUND(Notification);
+                gameStarted = true;
+            }
+        }
+        else if (!gameStarted) {
+            if (MainMenu::Render(gs)) {
+                // v0.9: show branding before entering game
+                g_showBranding = true;
             }
         } else {
             if (pendingNextMonth) {
@@ -262,8 +318,7 @@ int main() {
                     SOUND(Notification);           // v0.8
                 }
 
-                // v0.8: trigger victory/gameover sounds
-                if (gs.victory)  SOUND(Victory);
+                // v0.8/v0.9: victory/gameover sounds handled in RenderGame
                 if (gs.gameOver) SOUND(GameOver);
             }
             RenderGame(dt);
