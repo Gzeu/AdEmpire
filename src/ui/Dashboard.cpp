@@ -5,9 +5,11 @@
 #include "AgentSuggestionsPanel.h"
 #include "SidebarNav.h"
 #include "RevenueMultiplierWidget.h"
+#include "ContractsPanel.h"
 #include "../core/GameState.h"
 #include "../systems/StatsTracker.h"
 #include "../systems/MarketEventBridge.h"
+#include "../systems/ToastSystem.h"
 #include "../network/MarketFeed.h"
 #include <cstring>
 
@@ -17,6 +19,11 @@ static SidebarNav             s_nav;
 
 void Dashboard::Render(GameState& gs) {
     ImGuiIO& io = ImGui::GetIO();
+
+    // ── Flush pendingToasts from Simulation.cpp into ToastSystem ─────────────
+    for (auto& t : gs.pendingToasts)
+        ToastSystem::Push(t);
+    gs.pendingToasts.clear();
 
     // ── Sidebar (renders its own window, fixed left) ─────────────────────────
     s_nav.Render(gs);
@@ -199,6 +206,14 @@ void Dashboard::Render(GameState& gs) {
         // ════════════════════════════════════
         if (ImGui::BeginTabItem(" AI Advisor ")) {
             s_advisor.Render(gs, MarketFeed::Get().GetState());
+            ImGui::EndTabItem();
+        }
+
+        // ════════════════════════════════════
+        //  TAB 5 — Contracts
+        // ════════════════════════════════════
+        if (ImGui::BeginTabItem(" Contracts ")) {
+            ContractsPanel::Draw(gs);
             ImGui::EndTabItem();
         }
 
