@@ -2,16 +2,47 @@
 #include "imgui.h"
 #include "ChartRenderer.h"
 #include "LiveMarketPanel.h"
+#include "AgentSuggestionsPanel.h"
+#include "SidebarNav.h"
+#include "RevenueMultiplierWidget.h"
 #include "../core/GameState.h"
 #include "../systems/StatsTracker.h"
 #include "../systems/MarketEventBridge.h"
 #include "../network/MarketFeed.h"
 #include <cstring>
 
-void Dashboard::Render(GameState& gs) {
-    ImGui::Begin("Dashboard");
+// ── Static instances (persist across frames) ────────────────────────────────
+static AgentSuggestionsPanel s_advisor;
+static SidebarNav             s_nav;
 
-    // ── Tab bar: Overview / Channels / Live Market ──────────
+void Dashboard::Render(GameState& gs) {
+    ImGuiIO& io = ImGui::GetIO();
+
+    // ── Sidebar (renders its own window, fixed left) ─────────────────────────
+    s_nav.Render(gs);
+
+    // ── Main dashboard window — offset by sidebar width ──────────────────────
+    ImGui::SetNextWindowPos(ImVec2(SidebarNav::kWidth, 0));
+    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x - SidebarNav::kWidth, io.DisplaySize.y));
+    ImGui::SetNextWindowBgAlpha(1.f);
+    ImGui::Begin("Dashboard",
+                 nullptr,
+                 ImGuiWindowFlags_NoTitleBar |
+                 ImGuiWindowFlags_NoResize   |
+                 ImGuiWindowFlags_NoMove     |
+                 ImGuiWindowFlags_NoBringToDisplayOnFocus);
+
+    // ── Header row: title + revenue multiplier chip ──────────────────────────
+    ImGui::SetWindowFontScale(1.1f);
+    ImGui::TextUnformatted("AdEmpire  Dashboard");
+    ImGui::SetWindowFontScale(1.f);
+    ImGui::SameLine();
+    RevenueMultiplierWidget::Render(gs);
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ── Tab bar ───────────────────────────────────────────────────────────────
     if (ImGui::BeginTabBar("##dash_tabs")) {
 
         // ════════════════════════════════════
@@ -39,10 +70,10 @@ void Dashboard::Render(GameState& gs) {
                 ImGui::PopStyleColor();
             };
 
-            char bufBudget[32]; snprintf(bufBudget, sizeof(bufBudget), "$%.0f", gs.budget);
-            char bufShare[32];  snprintf(bufShare,  sizeof(bufShare),  "%.1f%%", gs.playerMarketShare);
+            char bufBudget[32];  snprintf(bufBudget,  sizeof(bufBudget),  "$%.0f", gs.budget);
+            char bufShare[32];   snprintf(bufShare,   sizeof(bufShare),   "%.1f%%", gs.playerMarketShare);
             char bufClients[16]; snprintf(bufClients, sizeof(bufClients), "%d", (int)gs.clients.size());
-            char bufMonth[16];  snprintf(bufMonth,   sizeof(bufMonth),  "Month %d", gs.month);
+            char bufMonth[16];   snprintf(bufMonth,   sizeof(bufMonth),   "Month %d", gs.month);
 
             KPI("Budget",       bufBudget,  ImVec4(0.30f,0.85f,0.50f,1.f));
             ImGui::SameLine(0.f, 8.f);
@@ -111,16 +142,15 @@ void Dashboard::Render(GameState& gs) {
                 { "Email",         0.08f, 5.1f, ImVec4(1.f,0.6f,0.3f,1.f) },
             };
 
-            // Apply market multiplier to ROI
             const MarketState& ms = MarketFeed::Get().GetState();
             float mult = MarketEventBridge::Get().GetRevenueMultiplier(ms);
 
             if (ImGui::BeginTable("##chantbl", 4,
                 ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame)) {
-                ImGui::TableSetupColumn("Channel",    ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Channel",     ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableSetupColumn("Budget Share",ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("ROI (live)", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Trend",      ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("ROI (live)",  ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Trend",       ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableHeadersRow();
 
                 for (auto& c : channels) {
@@ -161,6 +191,14 @@ void Dashboard::Render(GameState& gs) {
         // ════════════════════════════════════
         if (ImGui::BeginTabItem(" Live Market ")) {
             LiveMarketPanel::RenderLiveMarket();
+            ImGui::EndTabItem();
+        }
+
+        // ════════════════════════════════════
+        //  TAB 4 — AI Advisor
+        // ════════════════════════════════════
+        if (ImGui::BeginTabItem(" AI Advisor ")) {
+            s_advisor.Render(gs, MarketFeed::Get().GetState());
             ImGui::EndTabItem();
         }
 
