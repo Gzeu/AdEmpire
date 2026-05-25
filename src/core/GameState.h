@@ -58,7 +58,7 @@ struct Client {
     bool           available;
     std::vector<int> campaignIds;
     float          totalRevenue;
-    int            unlockMonth = 1; // month when client becomes pitchable
+    int            unlockMonth = 1;
 };
 
 // ─── Staff ──────────────────────────────────────────────────────────────────
@@ -73,8 +73,7 @@ static const char* RoleNames[] = {
 static const float RoleSalaries[] = { 3500.f, 4500.f, 3000.f, 5000.f, 6000.f, 4000.f };
 static const float RoleBonus[]    = { 0.15f, 0.20f, 0.10f, 0.25f, 0.30f, 0.15f };
 
-// Staff level tiers (matches StaffLeveling.cpp)
-static const char* LevelNames[] = { "Junior", "Mid", "Senior", "Lead", "Principal" };
+static const char* LevelNames[]      = { "Junior", "Mid", "Senior", "Lead", "Principal" };
 static const float LevelThresholds[] = { 0.f, 0.35f, 0.55f, 0.75f, 0.90f };
 
 struct StaffMember {
@@ -82,9 +81,9 @@ struct StaffMember {
     std::string name;
     StaffRole   role;
     float       salary;
-    float       skill;       // 0.0 – 1.0
+    float       skill;
     int         monthsHired;
-    int         level = 0;   // 0=Junior … 4=Principal
+    int         level = 0;
 };
 
 // ─── AI Competitor ───────────────────────────────────────────────────────────
@@ -95,7 +94,7 @@ struct AIAgency {
     float       reputation;
     float       aggressiveness;
     int         clientCount;
-    std::string strategy; // "premium" | "volume" | "niche"
+    std::string strategy;
 };
 
 // ─── News Event ──────────────────────────────────────────────────────────────
@@ -106,6 +105,25 @@ struct NewsEvent {
     int   durationMonths;
     bool  active;
     int   monthsLeft;
+};
+
+// ─── v0.9: Game Event (popup events from EventSystem) ────────────────────────
+struct GameEvent {
+    std::string id;
+    std::string title;
+    std::string description;
+    std::string impact;          // short one-liner shown in popup
+    float       budgetDelta   = 0.f;
+    float       reputationDelta = 0.f;
+    float       marketShareDelta = 0.f;
+    // Channel multiplier deltas (additive on top of NewsEvent mods)
+    float socialMod   = 1.f;
+    float seoMod      = 1.f;
+    float emailMod    = 1.f;
+    float influencerMod = 1.f;
+    float prMod       = 1.f;
+    float paidMod     = 1.f;
+    int   durationMonths = 1;
 };
 
 // ─── Achievement ─────────────────────────────────────────────────────────────
@@ -184,7 +202,7 @@ struct CampaignTemplate {
     std::string    name;
     ChannelType    channel;
     float          suggestedBudget;
-    float          qualityBonus;   // added to qualityScore
+    float          qualityBonus;
     ClientIndustry bestFor;
     std::string    description;
 };
@@ -203,12 +221,12 @@ struct SaveSlotMeta {
 // ─── Main GameState ──────────────────────────────────────────────────────────
 struct GameState {
     // Agency info
-    std::string agencyName        = "My Agency";
-    float       budget            = 10000.f;
-    float       monthlyRevenue    = 0.f;
-    float       monthlyExpenses   = 0.f;
-    int         month             = 1;
-    int         year              = 2024;
+    std::string agencyName      = "My Agency";
+    float       budget          = 10000.f;
+    float       monthlyRevenue  = 0.f;
+    float       monthlyExpenses = 0.f;
+    int         month           = 1;
+    int         year            = 2024;
 
     // Collections
     std::vector<Client>         clients;
@@ -238,6 +256,16 @@ struct GameState {
     int nextCampaignId = 1;
     int nextStaffId    = 1;
 
+    // ── v0.9: Agency Branding ─────────────────────────────────────────────────
+    // Used by AgencyBrandingPanel + navbar badge
+    ImVec4      agencyColor = ImVec4(1.f, 0.78f, 0.f, 1.f);  // gold default
+    std::string agencyLogo  = "Diamond";                       // logo preset key
+
+    // ── v0.9: Event Popup gate ────────────────────────────────────────────────
+    // Set to true by EventSystem::TryTriggerEvent(); cleared by EventPopup after dismiss
+    bool        pendingEventPopup = false;
+    GameEvent   currentEvent;                                  // event to display
+
     // ── UI flags (all panel visibility) ──────────────────────────────────────
     bool showDashboard       = true;
     bool showCampaigns       = false;
@@ -246,12 +274,12 @@ struct GameState {
     bool showMarketMap       = false;
     bool showNewsfeed        = false;
     bool showReport          = false;
-    bool showAchievements    = false;  // v0.5
+    bool showAchievements    = false;
     bool showGoals           = false;
     bool showSpecializations = false;
     bool showNegotiation     = false;
-    bool showTemplates       = false;  // v0.5
-    bool showSaveSlots       = false;  // v0.5
+    bool showTemplates       = false;
+    bool showSaveSlots       = false;
     bool gameOver            = false;
     bool victory             = false;
 };

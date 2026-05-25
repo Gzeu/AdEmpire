@@ -1,0 +1,149 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  build-linux:
+    name: Build — Ubuntu 22.04
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            build-essential cmake ninja-build \
+            libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev \
+            libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libxxf86vm-dev
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j$(nproc)
+
+      - name: Package (TGZ)
+        working-directory: build
+        run: cpack -G TGZ
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdEmpire-linux
+          path: build/*.tar.gz
+
+  # ────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Build — Windows (MSVC)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b6c67f7e6fd4c5d'
+
+      - name: Install deps via vcpkg
+        run: vcpkg install glfw3:x64-windows
+
+      - name: Configure
+        run: |
+          cmake -S . -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package (ZIP)
+        working-directory: build
+        run: cpack -G ZIP
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdEmpire-windows
+          path: build/*.zip
+
+  # ────────────────────────────────────────────────────────────────
+  build-macos:
+    name: Build — macOS 14 (arm64)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: brew install cmake glfw ninja
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j$(sysctl -n hw.logicalcpu)
+
+      - name: Package (ZIP)
+        working-directory: build
+        run: cpack -G ZIP
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdEmpire-macos
+          path: build/*.zip
+
+  # ────────────────────────────────────────────────────────────────
+  github-release:
+    name: Publish GitHub Release
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "AdEmpire ${{ github.ref_name }}"
+          body: |
+            ## AdEmpire ${{ github.ref_name }}
+
+            Automated release built from tag `${{ github.ref_name }}`.
+
+            ### Downloads
+            | Platform | File |
+            |---|---|
+            | 🐧 Linux (Ubuntu 22.04) | `AdEmpire-*-Linux.tar.gz` |
+            | 🪟 Windows x64 | `AdEmpire-*-win64.zip` |
+            | 🍎 macOS arm64 | `AdEmpire-*-macOS.zip` |
+
+            ### Quick Start (Linux)
+            ```bash
+            tar xzf AdEmpire-*.tar.gz
+            cd AdEmpire*/bin
+            ./AdEmpire
+            ```
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          files: |
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip
