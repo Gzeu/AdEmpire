@@ -8,9 +8,27 @@
 ![CMake](https://img.shields.io/badge/CMake-3.16+-red.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-purple.svg)
-![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![Version](https://img.shields.io/badge/version-v0.7%20COMPLETE-brightgreen.svg)
-![Files](https://img.shields.io/badge/source%20files-55%2B-blueviolet.svg)
+![Version](https://img.shields.io/badge/version-v0.9%20COMPLETE-brightgreen.svg)
+![Files](https://img.shields.io/badge/source%20files-60%2B-blueviolet.svg)
+![Audio](https://img.shields.io/badge/audio-OpenAL-yellow.svg)
+![Network](https://img.shields.io/badge/leaderboard-REST%20API-blue.svg)
+![Steam](https://img.shields.io/badge/Steam-stub%20ready-lightgrey.svg)
+![Release](https://github.com/Gzeu/AdEmpire/actions/workflows/release.yml/badge.svg)
+
+---
+
+## 📸 Screenshots
+
+> 🎮 *First playtest screenshots coming soon — compile locally and send your best moment!*
+
+| Dashboard | Negotiation | Victory Screen |
+|:---------:|:-----------:|:--------------:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Negotiation](docs/screenshots/negotiation.png) | ![Victory](docs/screenshots/victory.png) |
+
+<!-- To add your screenshot:
+  1. Compile: cmake .. && make -j$(nproc) && ./AdEmpire
+  2. Take a screenshot and save to docs/screenshots/
+  3. Open a PR or push directly to main -->
 
 ---
 
@@ -26,26 +44,30 @@ Every month you:
 - **Complete quarterly goals** for cash and reputation rewards
 - **Unlock 8 agency specializations** that multiply performance in target industries
 - **Beat 3 AI rivals** (MediaBlaze, PeakBrands, NicheNation) that grow, adapt, and poach clients
-- **Track performance** with per-channel and per-industry analytics
+- **Track performance** with per-channel and per-industry analytics via real-time bar charts
+- **Customize your agency** with branding color and logo selector
 
 **Win:** Reach **35% market share**  
 **Lose:** Budget drops below **−$50,000**  
-**Difficulty:** Easy ($20K start) / Normal ($10K) / Hard ($5K, AI 100% aggression)
+**Difficulty:** Easy ($20K start) / Normal ($10K) / Hard ($5K, AI 100% aggression) / Nightmare
 
 ---
 
-## ✅ v0.7 — Feature Complete
+## ✅ v0.9 — Feature Complete
 
-Latest commit: [20898e67](https://github.com/Gzeu/AdEmpire/commit/20898e673d189cb8aac8d5447359f70eca57da44)
+Latest commit: [3df56ba6](https://github.com/Gzeu/AdEmpire/commit/3df56ba6e94ea265b5f64e1ac043d79da9f87f50)
 
 | Category | Files | Status |
 |---|---:|---|
 | Core | 4 | ✅ |
 | Systems | 20 | ✅ |
 | UI | 20 | ✅ |
+| Audio | 1 | ✅ |
+| Network | 1 | ✅ |
+| Platform | 1 | ✅ |
 | Assets / Data | 4 | ✅ |
-| Docs / Usage guides | 7 | ✅ |
-| **Total** | **55+** | **✅ done** |
+| Docs / Usage guides | 9 | ✅ |
+| **Total** | **60+** | **✅ done** |
 
 ---
 
@@ -93,6 +115,24 @@ Latest commit: [20898e67](https://github.com/Gzeu/AdEmpire/commit/20898e673d189c
 | Leaderboard | `systems/Leaderboard.h` | Top-10 local scores, persistent `leaderboard.json`, auto-sort |
 | Leaderboard Panel | `ui/LeaderboardPanel.h/cpp` | Gold/silver/bronze highlights, sortable columns |
 | Custom Events JSON | `assets/data/custom_events.json` | 31 moddable events (no recompile needed) |
+
+### v0.8 Systems
+| System | File | Description |
+|---|---|---|
+| Audio System | `audio/AudioSystem.h` | OpenAL procedural WAV synthesis — campaign win/loss/achievement SFX |
+| REST Leaderboard | `network/LeaderboardClient.h` | Optional online score submit via cpp-httplib, local fallback |
+
+### v0.9 Systems
+| System | File | Description |
+|---|---|---|
+| Agency Branding | `ui/AgencyBrandingPanel.h` | Custom color (ImVec4) + logo selector, persisted in GameState |
+| Chart Renderer | `ui/ChartRenderer.h` | Real-time revenue bar charts via ImGui DrawList |
+| Splash Screen | `ui/SplashScreen.h` | Animated intro with logo morph and tagline fade |
+| Victory Screen | `ui/VictoryScreen.h` | Full-screen celebration on 35% market share + final stats |
+| Event Popup | `ui/EventPopup.h` | Modal gate for market events — blocks month advance until dismissed |
+| Steam Stub | `platform/SteamIntegration.h` | Greenworks-compatible achievement hooks, compile-time opt-in |
+| Cross-Platform Build | `CMakeLists.txt` | Linux/macOS/Windows + CPack TGZ/ZIP/NSIS |
+| GitHub Actions | `.github/workflows/release.yml` | Auto-release on `v*.*.*` tag — 3 platform binaries |
 
 ---
 
@@ -162,33 +202,58 @@ AdEmpire/
 │   │   ├── Difficulty_usage.md
 │   │   ├── Toast_usage.md
 │   │   └── Leaderboard_usage.md
-│   └── ui/
-│       ├── Theme.h
-│       ├── MainMenu.cpp
-│       ├── Dashboard.cpp
-│       ├── CampaignEditor.cpp
-│       ├── ClientManager.cpp
-│       ├── MarketMap.cpp
-│       ├── Newsfeed.cpp
-│       ├── StaffPanel.cpp
-│       ├── NegotiationPanel.cpp
-│       ├── GoalsPanel.cpp
-│       ├── SpecializationPanel.cpp
-│       ├── AchievementsPanel.cpp
-│       ├── TemplatesPanel.cpp
-│       ├── SaveSlotsPanel.cpp
-│       ├── ReportPanel.h / .cpp     # v0.7
-│       ├── LeaderboardPanel.h / .cpp # v0.7
-│       └── ToastSystem.h            # v0.7
+│   ├── ui/
+│   │   ├── Theme.h
+│   │   ├── MainMenu.cpp
+│   │   ├── Dashboard.cpp
+│   │   ├── CampaignEditor.cpp
+│   │   ├── ClientManager.cpp
+│   │   ├── MarketMap.cpp
+│   │   ├── Newsfeed.cpp
+│   │   ├── StaffPanel.cpp
+│   │   ├── NegotiationPanel.cpp
+│   │   ├── GoalsPanel.cpp
+│   │   ├── SpecializationPanel.cpp
+│   │   ├── AchievementsPanel.cpp
+│   │   ├── TemplatesPanel.cpp
+│   │   ├── SaveSlotsPanel.cpp
+│   │   ├── ReportPanel.h / .cpp     # v0.7
+│   │   ├── LeaderboardPanel.h / .cpp # v0.7
+│   │   ├── ToastSystem.h            # v0.7
+│   │   ├── AgencyBrandingPanel.h    # v0.9
+│   │   ├── ChartRenderer.h          # v0.9
+│   │   ├── SplashScreen.h           # v0.9
+│   │   ├── VictoryScreen.h          # v0.9
+│   │   └── EventPopup.h             # v0.9
+│   ├── audio/
+│   │   └── AudioSystem.h            # v0.8 — OpenAL procedural WAV
+│   ├── network/
+│   │   └── LeaderboardClient.h      # v0.8 — REST leaderboard (cpp-httplib)
+│   └── platform/
+│       └── SteamIntegration.h       # v0.9 — Steam achievement stub
 ├── assets/
 │   └── data/
 │       ├── clients.json             # 30 clients
 │       ├── channels.json            # 6 channels
 │       ├── events.json
 │       └── custom_events.json       # 31 moddable events (v0.7)
+├── docs/
+│   ├── landing/
+│   │   └── index.html               # Presentation website
+│   └── screenshots/                 # Add gameplay screenshots here
+├── .github/
+│   ├── workflows/
+│   │   └── release.yml              # Auto-release Linux/Windows/macOS
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   └── pull_request_template.md
 ├── lib/
 │   └── imgui/                       # git submodule → ocornut/imgui
-├── CMakeLists.txt
+├── CMakeLists.txt                   # Cross-platform (Linux/macOS/Windows + CPack)
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── SECURITY.md
 ├── SETUP.md
 └── README.md
 ```
@@ -212,11 +277,56 @@ make -j$(nproc)
 git submodule update --init --recursive
 ```
 
+### macOS (Homebrew)
+```bash
+brew install cmake glfw
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(sysctl -n hw.ncpu)
+```
+
 ### Windows (MSVC / vcpkg)
 ```bash
-vcpkg install glfw3 opengl
+vcpkg install glfw3 opengl openal-soft
 cmake .. -DCMAKE_TOOLCHAIN_FILE=[vcpkg root]/scripts/buildsystems/vcpkg.cmake
 ```
+
+> **Tip:** OpenAL and cpp-httplib are optional. The game compiles and runs fully without them — audio and online leaderboard are gracefully disabled if the libraries are absent.
+
+---
+
+## 🔊 Audio (OpenAL — optional)
+
+`src/audio/AudioSystem.h` is fully implemented with procedural WAV synthesis (no external audio files needed).
+
+```bash
+# Ubuntu
+sudo apt install libopenal-dev
+# macOS
+brew install openal-soft
+# Windows
+vcpkg install openal-soft
+```
+
+Enable in CMake:
+```cmake
+find_package(OpenAL)
+if(OpenAL_FOUND)
+  target_link_libraries(AdEmpire OpenAL::OpenAL)
+  target_compile_definitions(AdEmpire PRIVATE ADEMPIRE_AUDIO)
+endif()
+```
+
+---
+
+## 🌐 REST Leaderboard (optional)
+
+`src/network/LeaderboardClient.h` uses [cpp-httplib](https://github.com/yhirose/cpp-httplib) (header-only). Point it at any HTTP endpoint that accepts a JSON POST with `{ "name": "...", "score": 123456 }`.
+
+```cpp
+LeaderboardClient::Get().Submit("AgencyName", gs.totalRevenue);
+```
+
+If the server is unreachable, the client falls back silently to the local `leaderboard.json`.
 
 ---
 
@@ -251,12 +361,12 @@ Modifiers stack: market events × seasonal × industry bonus × specialization �
 
 | Issue | Fix |
 |---|---|
-| `nlohmann/json` missing | CMakeLists `file(DOWNLOAD ...)` auto-fetches |
+| `nlohmann/json` missing | CMakeLists `FetchContent` auto-fetches |
 | `std::hash<ChannelType>` | Template specialization in `GameState.h` |
 | Magic `rand() % 8` | Replaced with `STAFF_NAME_COUNT` constant |
 | Missing `<algorithm>` | Added to `ClientManager.cpp` |
 
-> ✅ Zero known compilation blockers on GCC 11+ / Clang 14+ / Ubuntu 22.04+
+> ✅ Zero known compilation blockers on GCC 11+ / Clang 14+ / MSVC 19.38+ / Ubuntu 22.04+
 
 ---
 
@@ -264,22 +374,33 @@ Modifiers stack: market events × seasonal × industry bonus × specialization �
 
 | Version | Commit | Highlights |
 |---|---|---|
-| v0.1 | Initial | Core engine: Campaign, Client, Staff, AI, Events, Dashboard, Save |
+| v0.1 | [7d8084cf](https://github.com/Gzeu/AdEmpire/commit/7d8084cf22e258e6683d8f9479118a3eac6cc620) | Core engine: Campaign, Client, Staff, AI, Events, Dashboard, Save |
 | v0.2 | [14113c8e](https://github.com/Gzeu/AdEmpire/commit/14113c8eb3b2e2f699e5ae3752c12c8a5416feb7) | Negotiation, FitScore, Quarterly Goals, Specializations |
-| v0.3–v0.6 | Multiple | Toasts, Reports, Achievements, Templates, Save Slots, Staff Leveling |
-| **v0.7** | [**20898e67**](https://github.com/Gzeu/AdEmpire/commit/20898e673d189cb8aac8d5447359f70eca57da44) | **StatsTracker, DifficultySystem, Leaderboard, 31 JSON events, integration guides** |
+| v0.3–v0.6 | [aa6004fe](https://github.com/Gzeu/AdEmpire/commit/aa6004fef62d05827fdfef34499a98f3adc84f62) | Toasts, Reports, Achievements, Templates, Save Slots, Staff Leveling |
+| v0.7 | [20898e67](https://github.com/Gzeu/AdEmpire/commit/20898e673d189cb8aac8d5447359f70eca57da44) | StatsTracker, DifficultySystem, Leaderboard, 31 JSON events, guides |
+| v0.8 | [28bd9370](https://github.com/Gzeu/AdEmpire/commit/28bd9370ff9a33ea17e1844e327bf65318ce4ec5) | OpenAL audio (procedural WAV) + REST leaderboard (cpp-httplib) |
+| **v0.9** | [**3df56ba6**](https://github.com/Gzeu/AdEmpire/commit/3df56ba6e94ea265b5f64e1ac043d79da9f87f50) | **AgencyBranding, ChartRenderer, SplashScreen, VictoryScreen, EventPopup, Steam stub, cross-platform CMake, GitHub Actions release** |
+
+See [CHANGELOG.md](CHANGELOG.md) for the full detailed changelog.
 
 ---
 
-## 🔮 What could come next (post v0.7)
+## 🔮 What's Next (v1.0 and beyond)
 
-The game is playable and complete. Optional future improvements:
+| Feature | Status |
+|---|---|
+| First binary release (Linux / Windows / macOS) | 🟡 Ready — run `git tag v1.0.0 && git push origin v1.0.0` |
+| Screenshots in README | 🟡 Needs first playtest — add to `docs/screenshots/` |
+| GitHub Pages landing page | 🟡 Built at `docs/landing/index.html` — enable in repo Settings |
+| Android / iOS port via ImGui + SDL2 | 🔵 Future |
+| Multiplayer / co-op agency mode | 🔵 Future |
+| Steam submission | 🔵 Stub ready in `src/platform/SteamIntegration.h` |
 
-- Sound effects via OpenAL (`src/audio/AudioSystem.h` stub is ready)
-- Screenshots in this README after first playtest
-- Android / iOS port via ImGui + SDL2
-- Online leaderboard via REST API
-- Steam Greenlight submission
+---
+
+## 🤝 Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code style, and how to add new events via JSON (no C++ required).
 
 ---
 
