@@ -41,10 +41,10 @@ inline void Render(GameState& gs) {
                 ImGui::Spacing();
                 ImGui::TextColored(UIStyle::Muted, "No runs recorded yet. Win a game to appear here!");
             } else {
-                // Sort by totalRevenue desc
+                // Sort by score desc
                 auto sorted = gs.leaderboard;
                 std::sort(sorted.begin(), sorted.end(),
-                          [](const auto& a, const auto& b){ return a.totalRevenue > b.totalRevenue; });
+                          [](const auto& a, const auto& b){ return a.score > b.score; });
 
                 ImGui::Columns(4, "lb_local", true);
                 ImGui::SetColumnWidth(0, 60);  ImGui::TextColored(UIStyle::Muted, "Rank");   ImGui::NextColumn();
@@ -61,8 +61,8 @@ inline void Render(GameState& gs) {
                                : UIStyle::TextPrimary;
                     ImGui::TextColored(col, "  #%d", rank); ImGui::NextColumn();
                     ImGui::TextColored(col, "%s", e.agencyName.c_str()); ImGui::NextColumn();
-                    ImGui::TextColored(col, "$%s", FormatNum((int)e.totalRevenue).c_str()); ImGui::NextColumn();
-                    ImGui::TextColored(col, "%d mo", e.monthsPlayed); ImGui::NextColumn();
+                    ImGui::TextColored(col, "$%s", FormatNum((int)e.revenue).c_str()); ImGui::NextColumn();
+                    ImGui::TextColored(col, "%d mo", e.months); ImGui::NextColumn();
                     ++rank;
                     if (rank > 10) break;
                 }

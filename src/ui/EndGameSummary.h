@@ -6,6 +6,9 @@
 #include <string>
 #include <algorithm>
 
+// Forward declaration of gameStarted from main.cpp
+extern bool gameStarted;
+
 // ============================================================
 //  EndGameSummary v1.1
 //  Full-screen end-game screen: win / lose
@@ -153,7 +156,6 @@ inline void Render(GameState& gs) {
     if (ImGui::Button("Return to Main Menu", ImVec2(btnW, 42))) {
         gs = GameState();
         gs.showEndGame = false;
-        extern bool gameStarted;
         gameStarted = false;
     }
 

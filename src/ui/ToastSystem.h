@@ -89,3 +89,9 @@ inline void ToastSystem::Render() {
         ImGui::PopStyleVar();
     }
 }
+
+// Convenience macros
+#define TOAST_SUCCESS(msg) ToastSystem::Get().Push(msg, ToastType::Success)
+#define TOAST_ERROR(msg)   ToastSystem::Get().Push(msg, ToastType::Error)
+#define TOAST_INFO(msg)    ToastSystem::Get().Push(msg, ToastType::Info)
+#define TOAST_WARN(msg)    ToastSystem::Get().Push(msg, ToastType::Warning)

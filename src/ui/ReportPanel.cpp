@@ -93,7 +93,8 @@ void ReportPanel::Render(GameState& gs) {
     ImGui::Separator();
     ImGui::Text("Revenue by Channel (lifetime)");
     float chRev[6] = {};
-    StatsTracker::Get().FillChannelRevenue(chRev);
+    // TODO: Implement channel revenue tracking in v1.2
+    // StatsTracker::Get().FillChannelRevenue(chRev);
     for (int i = 0; i < 6; i++) {
         ImGui::Text("  %-16s", ChannelNames[i]);
         ImGui::SameLine();
@@ -106,7 +107,8 @@ void ReportPanel::Render(GameState& gs) {
     ImGui::Separator();
     ImGui::Text("Industry Win Rate (pitches)");
     float winRates[8] = {};
-    StatsTracker::Get().FillIndustryWinRate(winRates);
+    // TODO: Implement industry win rate tracking in v1.2
+    // StatsTracker::Get().FillIndustryWinRate(winRates);
     for (int i = 0; i < 8; i++) {
         ImGui::Text("  %-18s", IndustryNames[i]);
         ImGui::SameLine();

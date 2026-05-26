@@ -15,7 +15,7 @@
 #include "systems/EventSystem.h"
 #include "systems/AICompetitor.h"
 #include "systems/SaveSystem.h"
-#include "systems/ToastSystem.h"
+#include "ui/ToastSystem.h"
 #include "systems/AchievementSystem.h"
 #include "systems/StaffLeveling.h"
 #include "systems/SeasonalEvents.h"

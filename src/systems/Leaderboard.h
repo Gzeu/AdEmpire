@@ -6,10 +6,10 @@
 
 struct LeaderboardEntry {
     std::string agencyName;
-    float       totalRevenue = 0.f;
+    long long   score        = 0;
+    float       revenue      = 0.f;
     float       marketShare  = 0.f;
-    int         monthsPlayed = 0;
-    int         year         = 0;
+    int         months       = 0;
     std::string difficulty;
 };
 
@@ -29,9 +29,9 @@ private:
 
     static void SortEntries(std::vector<LeaderboardEntry>& v) {
         std::sort(v.begin(), v.end(), [](const LeaderboardEntry& a, const LeaderboardEntry& b) {
-            return a.totalRevenue > b.totalRevenue;
+            return a.score > b.score;
         });
-        if (v.size() > 10) v.resize(10);
+        if (v.size() > 50) v.resize(50);
     }
 };
 
@@ -62,10 +62,10 @@ inline void Leaderboard::Save(const std::string& path) {
         auto& e = entries[i];
         f << "  {";
         f << "\"agency\":\"" << e.agencyName << "\",";
-        f << "\"revenue\":" << e.totalRevenue << ",";
+        f << "\"score\":" << e.score << ",";
+        f << "\"revenue\":" << e.revenue << ",";
         f << "\"share\":" << e.marketShare << ",";
-        f << "\"months\":" << e.monthsPlayed << ",";
-        f << "\"year\":" << e.year << ",";
+        f << "\"months\":" << e.months << ",";
         f << "\"difficulty\":\"" << e.difficulty << "\"";
         f << "}";
         if (i + 1 < entries.size()) f << ",";

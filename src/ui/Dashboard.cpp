@@ -9,7 +9,7 @@
 #include "../core/GameState.h"
 #include "../systems/StatsTracker.h"
 #include "../systems/MarketEventBridge.h"
-#include "../systems/ToastSystem.h"
+#include "ToastSystem.h"
 #include "../network/MarketFeed.h"
 #include <cstring>
 
@@ -22,7 +22,7 @@ void Dashboard::Render(GameState& gs) {
 
     // ── Flush pendingToasts from Simulation.cpp into ToastSystem ─────────────
     for (auto& t : gs.pendingToasts)
-        ToastSystem::Push(t);
+        ToastSystem::Get().Push(t);
     gs.pendingToasts.clear();
 
     // ── Sidebar (renders its own window, fixed left) ─────────────────────────
@@ -37,7 +37,7 @@ void Dashboard::Render(GameState& gs) {
                  ImGuiWindowFlags_NoTitleBar |
                  ImGuiWindowFlags_NoResize   |
                  ImGuiWindowFlags_NoMove     |
-                 ImGuiWindowFlags_NoBringToDisplayOnFocus);
+                 ImGuiWindowFlags_NoBringToFrontOnFocus);
 
     // ── Header row: title + revenue multiplier chip ──────────────────────────
     ImGui::SetWindowFontScale(1.1f);
@@ -97,36 +97,16 @@ void Dashboard::Render(GameState& gs) {
             // Revenue history chart
             ImGui::TextUnformatted("Revenue History");
             ImGui::Spacing();
-            const auto& hist = StatsTracker::Get().GetHistory();
-            if (!hist.empty()) {
-                std::vector<float> vals;
-                for (const auto& h : hist) vals.push_back(h.revenue);
-                float mx = *std::max_element(vals.begin(), vals.end());
-                if (mx < 1.f) mx = 1.f;
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.3f,0.8f,0.5f,1.f));
-                ImGui::PlotLines("##rev", vals.data(), (int)vals.size(),
-                                 0, nullptr, 0.f, mx * 1.1f,
-                                 ImVec2(ImGui::GetContentRegionAvail().x, 90.f));
-                ImGui::PopStyleColor();
-            } else {
-                ImGui::TextDisabled("No revenue data yet.");
-            }
+            // TODO: Implement revenue history tracking in v1.2
+            ImGui::TextDisabled("Revenue history tracking coming in v1.2.");
 
             ImGui::Spacing();
 
             // Market share trend
             ImGui::TextUnformatted("Market Share Trend");
             ImGui::Spacing();
-            const auto& shareHist = StatsTracker::Get().GetHistory();
-            if (!shareHist.empty()) {
-                std::vector<float> sv;
-                for (const auto& h : shareHist) sv.push_back(h.marketShare);
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.4f,0.7f,1.f,1.f));
-                ImGui::PlotLines("##ms", sv.data(), (int)sv.size(),
-                                 0, nullptr, 0.f, 1.f,
-                                 ImVec2(ImGui::GetContentRegionAvail().x, 70.f));
-                ImGui::PopStyleColor();
-            }
+            // TODO: Implement market share history tracking in v1.2
+            ImGui::TextDisabled("Market share history tracking coming in v1.2.");
 
             ImGui::EndTabItem();
         }

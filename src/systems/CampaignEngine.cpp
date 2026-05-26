@@ -96,4 +96,37 @@ void ProcessMonth(GameState& gs) {
         gs.stats.bestMonthRevenue = gs.monthlyRevenue;
 }
 
+Campaign CreateCampaign(const std::string& name, int clientId, ChannelType channel,
+                       float budget, int duration, GameState& gs) {
+    Campaign c;
+    c.id = gs.nextCampaignId++;
+    c.name = name;
+    c.clientId = clientId;
+    c.channel = channel;
+    c.budget = budget;
+    c.durationMonths = duration;
+    c.monthsLeft = duration;
+    c.active = false;
+    c.completed = false;
+    c.qualityScore = 0.5f; // default
+
+    // Calculate initial metrics based on budget and channel
+    float staffMod = CalcStaffMod(gs, c);
+    c.agencyFee = budget * 0.15f * staffMod;
+    c.revenue = budget * 0.3f * staffMod;
+    c.reach = budget * 10.f * staffMod;
+    c.ctr = 0.02f + (staffMod - 0.8f) * 0.01f;
+    c.conversionRate = 0.01f + (staffMod - 0.8f) * 0.005f;
+
+    return c;
+}
+
+float EstimateROI(const Campaign& c, const GameState& gs) {
+    float staffMod = CalcStaffMod(gs, c);
+    float estimatedRevenue = c.budget * 0.3f * staffMod * c.durationMonths;
+    float totalCost = c.budget * c.durationMonths;
+    if (totalCost <= 0.f) return 0.f;
+    return (estimatedRevenue / totalCost) * 100.f;
+}
+
 } // namespace CampaignEngine

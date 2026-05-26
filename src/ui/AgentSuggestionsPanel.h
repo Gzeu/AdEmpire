@@ -1,8 +1,8 @@
 #pragma once
 #include "imgui.h"
 #include "../core/GameState.h"
-#include "../systems/MarketFeed.h"
-#include "../systems/AgentInterface.h"
+#include "../network/MarketFeed.h"
+#include "../agent/AgentInterface.h"
 #include "ToastSystem.h"
 #include <vector>
 #include <string>
@@ -84,72 +84,72 @@ private:
 
         // Rule 1 — Fear & Greed extreme fear → cut paid search
         if (ms.fearGreedIndex < 25) {
-            _suggestions.push_back({
-                "📉",
-                "Cut Paid Search Budget",
-                "Fear & Greed = " + _fmt(ms.fearGreedIndex, 0)
+            AgentSuggestion s;
+            s.icon = "📉";
+            s.title = "Cut Paid Search Budget";
+            s.body = "Fear & Greed = " + _fmt(ms.fearGreedIndex, 0)
                 + " (Extreme Fear). CPCs drop — pause\n"
-                  "performance campaigns, hold brand spend.",
-                "Open Campaign Editor",
-                ImVec4(0.85f, 0.25f, 0.25f, 1.f),
-                1.0f - ms.fearGreedIndex / 100.f
-            });
+                  "performance campaigns, hold brand spend.";
+            s.action = "Open Campaign Editor";
+            s.color = ImVec4(0.85f, 0.25f, 0.25f, 1.f);
+            s.confidence = 1.0f - ms.fearGreedIndex / 100.f;
+            _suggestions.push_back(s);
         }
 
         // Rule 2 — Greed spike → pitch crypto / fintech clients
         if (ms.fearGreedIndex > 72) {
-            _suggestions.push_back({
-                "🚀",
-                "Pitch Crypto / FinTech Clients",
-                "Market Greed = " + _fmt(ms.fearGreedIndex, 0)
+            AgentSuggestion s;
+            s.icon = "🚀";
+            s.title = "Pitch Crypto / FinTech Clients";
+            s.body = "Market Greed = " + _fmt(ms.fearGreedIndex, 0)
                 + ". Appetite for risk is high — ideal\n"
-                  "window to upsell performance packages.",
-                "Open Client Manager",
-                ImVec4(0.25f, 0.80f, 0.45f, 1.f),
-                ms.fearGreedIndex / 100.f
-            });
+                  "window to upsell performance packages.";
+            s.action = "Open Client Manager";
+            s.color = ImVec4(0.25f, 0.80f, 0.45f, 1.f);
+            s.confidence = ms.fearGreedIndex / 100.f;
+            _suggestions.push_back(s);
         }
 
         // Rule 3 — Strong EUR/USD → finance sector bonus
         if (ms.eurUsd > 1.12f) {
-            _suggestions.push_back({
-                "💶",
-                "EUR/USD Strong — Target Finance Sector",
-                "EUR/USD = " + _fmt(ms.eurUsd, 4)
+            AgentSuggestion s;
+            s.icon = "💶";
+            s.title = "EUR/USD Strong — Target Finance Sector";
+            s.body = "EUR/USD = " + _fmt(ms.eurUsd, 4)
                 + ". European finance clients\n"
-                  "have bigger USD-equivalent budgets right now.",
-                "View Market Map",
-                ImVec4(0.30f, 0.60f, 0.95f, 1.f),
-                std::min(1.f, (ms.eurUsd - 1.05f) / 0.15f)
-            });
+                  "have bigger USD-equivalent budgets right now.";
+            s.action = "View Market Map";
+            s.color = ImVec4(0.30f, 0.60f, 0.95f, 1.f);
+            s.confidence = std::min(1.f, (ms.eurUsd - 1.05f) / 0.15f);
+            _suggestions.push_back(s);
         }
 
         // Rule 4 — revenueMultiplier < 0.8 → warn player
         if (gs.revenueMultiplier < 0.80f) {
-            _suggestions.push_back({
-                "⚠️",
-                "Revenue Debuffed — Check Active Events",
-                "revenueMultiplier = " + _fmt(gs.revenueMultiplier, 2)
+            AgentSuggestion s;
+            s.icon = "⚠️";
+            s.title = "Revenue Debuffed — Check Active Events";
+            s.body = "revenueMultiplier = " + _fmt(gs.revenueMultiplier, 2)
                 + ". An active market event\n"
-                  "is suppressing income. Review EventLog.",
-                "Open Event Log",
-                ImVec4(0.95f, 0.65f, 0.15f, 1.f),
-                1.0f - gs.revenueMultiplier
-            });
+                  "is suppressing income. Review EventLog.";
+            s.action = "Open Event Log";
+            s.color = ImVec4(0.95f, 0.65f, 0.15f, 1.f);
+            s.confidence = 1.0f - gs.revenueMultiplier;
+            _suggestions.push_back(s);
         }
 
         // Rule 5 — market share near win threshold
-        if (gs.marketShare >= 0.30f && gs.marketShare < 0.35f) {
-            _suggestions.push_back({
-                "🏆",
-                "Almost There — Final Push!",
-                "Market share = " + _fmt(gs.marketShare * 100.f, 1)
+        if (gs.playerMarketShare >= 0.30f && gs.playerMarketShare < 0.35f) {
+            AgentSuggestion s;
+            s.icon = "🏆";
+            s.title = "Almost There — Final Push!";
+            s.body = "Market share = " + _fmt(gs.playerMarketShare * 100.f, 1)
                 + "%. Target is 35%.\n"
-                  "Double down on top-performing campaigns.",
-                "Open Dashboard",
-                ImVec4(0.85f, 0.75f, 0.30f, 1.f),
-                gs.marketShare / 0.35f
-            });
+                  "Double down on top-performing campaigns.";
+            s.action = "Open Dashboard";
+            s.color = ImVec4(0.85f, 0.75f, 0.30f, 1.f);
+            s.confidence = gs.playerMarketShare / 0.35f;
+            _suggestions.push_back(s);
         }
 
         // Cap at 3 most important

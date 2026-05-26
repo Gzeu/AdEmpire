@@ -290,6 +290,9 @@ struct GameState {
     bool        pendingEventPopup = false;
     GameEvent   currentEvent;
 
+    // ── v1.0: Pending toast messages
+    std::vector<std::string> pendingToasts;
+
     // ── v1.1: End game summary screen
     bool        showEndGame = false;
 
